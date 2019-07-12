@@ -96,15 +96,25 @@ export default class App extends React.Component {
             //client.write('get_data');
             
             this.state.log.push({message:'connecting!'});
-            client.write('AUTH|' + this.state.device);
+            
           });
           
+          client.on('ready', (data) => { 
+            this.state.log.push('client ready');
+          }
+          );
           client.on('data', (data) => { 
-       
+            this.state.log.push('onData');
             this.state.log.push({message:data});
           }
           );
+          client.on('connect', (data) => { 
+            this.state.log.push('onConnect');
+            client.write('AUTH|' + this.state.device);
+          }
+          );
           client.on('error', function(error) {
+            this.state.log.push('onError');
             this.state.log.push({message:error});
           });
         /*
