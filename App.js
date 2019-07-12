@@ -2,9 +2,8 @@ import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Text, View, StyleSheet, FlatList, Platform, StatusBar } from 'react-native';
 import MapView from 'react-native-maps';
-import { UrlTile } from 'react-native-maps'
-import Sockets from 'react-native-sockets';
-//var net = require('react-native-tcp')
+import { UrlTile } from 'react-native-maps';
+var net  = require('react-native-tcp');
 
 import { createBottomTabNavigator, createAppContainer } from 'react-navigation';
 
@@ -22,22 +21,19 @@ const servUrl = "https://api.osmo.mobi/serv?" // to get server info
 const apiUrl = "https://api.osmo.mobi/iProx?"
 const OsmoAppKey = "Jdf43G_fVl3Opa42"
 
-var DeviceInfo = require('react-native-device-info');
+import DeviceInfo from 'react-native-device-info';
 
 class IconWithBadge extends React.Component {
     render() {
         const { name, badgeCount, color, size } = this.props;
-        return ( <
-                View style = {
+        return ( <View style = {
                     { width: 24, height: 24, margin: 5 }
                 } >
-                <
-                Ionicons name = { name }
+                <Ionicons name = { name }
                 size = { size }
                 color = { color }
                 /> {
-                badgeCount > 0 && ( <
-                    View style = {
+                badgeCount > 0 && ( <View style = {
                         {
                             position: 'absolute',
                             right: -6,
@@ -50,14 +46,12 @@ class IconWithBadge extends React.Component {
                             alignItems: 'center'
                         }
                     } >
-                    <
-                    Text style = {
+                    <Text style = {
                         { color: 'white', fontSize: 10, fontWeight: 'bold' }
-                    } > { badgeCount } < /Text> < /
-                    View >
+                    } > { badgeCount } </Text>
+                     </View >
                 )
-            } <
-            /View>
+            } </View>
     );
 }
 }
@@ -92,7 +86,27 @@ export default class App extends React.Component {
             maxReconnectAttempts: 10, //OPTIONAL (default infinity): how many time to attemp to auto-reconnect
 
         }
-        Sockets.startClient(config);
+        var client = new net.Socket();
+        
+        let options = {
+            host: srv[0],
+            port: srv[1]
+            };
+        client.connect(options, () => {
+            //client.write('get_data');
+            
+            this.state.log.push({message:'connecting!'});
+            client.write('AUTH|' + this.state.device);
+          });
+          
+          client.on('data', (data) => { 
+       
+            this.state.log.push({message:data});
+          }
+          );
+          client.on('error', function(error) {
+            this.state.log.push({message:error});
+          });
         /*
         this.state.log.push({message:'Opening WebSocket ' + address});
         var ws = new WebSocket('wss://' + address,['osmo']);

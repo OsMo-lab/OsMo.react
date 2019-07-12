@@ -25,5 +25,7 @@
         "ios": {
             "supportsTablet": true
         }
-    }
+    },
+    "name":"OsMo",
+    "displayName":"OsMo Monitoring"
 }
