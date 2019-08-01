@@ -3,8 +3,13 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Text, View, StyleSheet, FlatList, Platform, StatusBar } from 'react-native';
 import MapView from 'react-native-maps';
 import { UrlTile } from 'react-native-maps';
-var net  = require('react-native-tcp');
+//import {tls} from 'react-native-tls';
+// @ts-ignore
+const tls  = require('react-native-tls');
+//import {createSecureContext} from 'react-native-tls';
 
+const process = require('process');
+//import tls from 'react-native-tls';
 import { createBottomTabNavigator, createAppContainer } from 'react-navigation';
 
 
@@ -22,6 +27,7 @@ const apiUrl = "https://api.osmo.mobi/iProx?"
 const OsmoAppKey = "Jdf43G_fVl3Opa42"
 
 import DeviceInfo from 'react-native-device-info';
+import { TLSSocket } from 'tls';
 
 class IconWithBadge extends React.Component {
     render() {
@@ -77,6 +83,8 @@ export default class App extends React.Component {
     }
 
     connectToServer(address) {
+        process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+  
         let srv = address.split(':');
         let config = {
             address: srv[0], //ip address of server
@@ -86,37 +94,78 @@ export default class App extends React.Component {
             maxReconnectAttempts: 10, //OPTIONAL (default infinity): how many time to attemp to auto-reconnect
 
         }
-        var client = new net.Socket();
+
+        let sc = tls.createSecureContext({
+            minVersion: "TLSv1.1",
+            maxVersion: "TLSv1.3"
+        });
         
         let options = {
             host: srv[0],
-            port: srv[1]
+            port: parseInt(srv[1]),
+            //secureContext: sc,
+            secureProtocol: "TLSv1_2_method",
             };
-        client.connect(options, () => {
+        const client = tls.connect(options, () => {
             //client.write('get_data');
-            
-            this.state.log.push({message:'connecting!'});
-            
+            this.state.log.push({message:'connecting TLS!'});
           });
           
-          client.on('ready', (data) => { 
-            this.state.log.push('client ready');
+          client.setEncoding('utf8');
+          
+            client.on('close', (hadError) => { 
+            this.state.log.push({message:'onClose. hadError:' + hadError});
+          }
+          );
+
+          client.on('connect',() => { 
+            this.state.log.push({message:'client connected ' + 
+            (client.authorized ? 'authorized' : 'unauthorized')});
+          
+            //process.stdin.pipe(client);
+            //process.stdin.resume();
+          }
+          );
+          
+          
+          client.on('secureConnect',() => { 
+            cmd = 'AUTH|' + this.state.device + '\n'
+            this.state.log.push({message:'onSecureConnect send ' + cmd});
+            client.write('AUTH|' + cmd);
+          }
+          );
+          client.on('drain', () => { 
+            this.state.log.push({message:'client drain'});
+          }
+          );
+
+          client.on('ready', () => { 
+            this.state.log.push({message:'client ready'});
+          }
+          );
+          
+          client.on('end', () => { 
+            this.state.log.push({message:'client end'});
           }
           );
           client.on('data', (data) => { 
-            this.state.log.push('onData');
+            this.state.log.push({message:'onData'});
             this.state.log.push({message:data});
           }
           );
-          client.on('connect', (data) => { 
-            this.state.log.push('onConnect');
-            client.write('AUTH|' + this.state.device);
+          
+          client.on('lookup', () => { 
+            this.state.log.push({message:'client lookup'});
           }
           );
           client.on('error', function(error) {
-            this.state.log.push('onError');
+            this.state.log.push({message:'onError'});
             this.state.log.push({message:error});
           });
+          client.on('timeout', () => { 
+            this.state.log.push({message:'client timeout'});
+          }
+          );
         /*
         this.state.log.push({message:'Opening WebSocket ' + address});
         var ws = new WebSocket('wss://' + address,['osmo']);
@@ -175,18 +224,9 @@ export default class App extends React.Component {
 
         let requestString = 'app=' + OsmoAppKey + '&id=' + vendorKey + '&imei=0&platform=' + platform;
 
-        /*
-        body = 
-        JSON.stringify({
-            app: OsmoAppKey,
-            id: vendorKey,
-            imei:0,
-            platform:platform,
-            })
-        */
         this.state.groups.push({ name: 'Group 1', uid: 1 });
         this.state.groups.push({ name: 'Group 2', uid: 2 });
-        this.state.log.push({ message: 'POST:' + requestString });
+        this.state.log.push({ message: 'ComponentDidMound POST:' + requestString });
         return fetch(authUrl, {
                 method: 'POST',
                 headers: {
@@ -195,7 +235,9 @@ export default class App extends React.Component {
                 },
                 body: requestString
             })
-            .then((response) => response.json())
+            .then((response) => {
+                return response.json()
+            })
             .then((responseJson) => {
                 this.state.log.push({ message: JSON.stringify(responseJson) });
 
