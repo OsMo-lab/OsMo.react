@@ -15,11 +15,11 @@
     "react-native-maps": "^0.24.2",
     "react-native-os": "^1.0.1",
     "react-native-paper": "2.15.2",
-    "react-native-tls": "0.0.2",
     "react-native-vector-icons": "^6.6.0",
     "react-navigation": "^3.11.0",
     "readable-stream": "^1.0.33",
-    "stream-browserify": "^1.0.0"
+    "stream-browserify": "^1.0.0",
+    "util": "^0.10.4"
   },
   "devDependencies": {
     "@babel/core": "7.4.5",
@@ -57,8 +57,7 @@
     "dgram": "react-native-udp",
     "timers": "timers-browserify",
     "tty": "tty-browserify",
-    "vm": "vm-browserify",
-    "tls": "react-native-tls"
+    "vm": "vm-browserify"
   },
   "browser": {
     "_stream_transform": "readable-stream/transform",
@@ -82,7 +81,6 @@
     "dgram": "react-native-udp",
     "timers": "timers-browserify",
     "tty": "tty-browserify",
-    "vm": "vm-browserify",
-    "tls": "react-native-tls"
+    "vm": "vm-browserify"
   }
 }

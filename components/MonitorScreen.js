@@ -1,9 +1,17 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Text, View, Image, Platform, StatusBar } from 'react-native';
+import { Text, View, Image, Platform, StatusBar, NativeModules } from 'react-native';
+
+
 
 
 export default class MonitorScreen extends React.Component {
+  TrackerClick() {
+    const {ConnectionManager} = NativeModules;
+    ConnectionManager.startSendingCoordinates(false);
+    console.log('tracker clicked');
+
+  }
   render() {
     return (
       <View style={{paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight,flex: 1, backgroundColor: 'black',paddingLeft:5}}>
@@ -34,10 +42,10 @@ export default class MonitorScreen extends React.Component {
         </View>
         <View style={{flexDirection: 'row'}}>
           <Text style={{color:'lightgray',fontSize:20}}>TrackerID:</Text>
-          <Text style={{color:'lightgray',fontSize:20}}>XXX-XXX-XXX</Text>
+          <Text style={{color:'lightgray',fontSize:20}}>{this.props.screenProps.appState.device}</Text>
         </View>
         <View style={{flexDirection: 'row', margin: 5 }}>
-          <Ionicons name='ios-play' size={140} color='#FB671E' />
+          <Ionicons name='ios-play' size={140} color='#FB671E' onPress={() => this.TrackerClick()}/>
           <Ionicons style={{paddingLeft:20,alignSelf: "flex-end"}} name='ios-pause' size={80} color='#FB671E' />
         </View>
         <View style={{flexDirection: 'row'}}>
