@@ -18,10 +18,11 @@ let servUrl = URL(string: "https://api.osmo.mobi/serv?") // to get server info
 let iOsmoAppKey = "Jdf43G_fVl3Opa42"
 let apiUrl = "https://api.osmo.mobi/iProx?"
 
-@objc (ConnectionManager)
-class ConnectionManager: RCTEventEmitter{
+class ConnectionManager: NSObject{
   
   private let bgController = ConnectionHelper()
+  //@objc let emitter = OsMoEventEmitter.sharedOsMoEventEmitte//r
+  let onMessageReceived = ObserverSet<(String)>()
   var monitoringGroupsHandler: ObserverSetEntry<[UserGroupCoordinate]>?
   
   var onGroupListUpdated: ObserverSetEntry<[Group]>?
@@ -83,21 +84,16 @@ class ConnectionManager: RCTEventEmitter{
   
   public var timer = Timer()
   
-  
+
   @objc class var sharedConnectionManager : ConnectionManager{
-    
     struct Static {
       static let instance: ConnectionManager = ConnectionManager()
     }
-    
+ 
     return Static.instance
   }
   
-  // we need to override this method and
-  // return an array of event names that we can listen to
-  override func supportedEvents() -> [String]! {
-    return ["onMessageReceived"]
-  }
+
   
   override init(){
     coordinates = [LocationModel]()
@@ -361,9 +357,7 @@ class ConnectionManager: RCTEventEmitter{
   }
   
 
-  override static func requiresMainQueueSetup() -> Bool {
-    return true
-  }
+
   
   open func closeConnection() {
     if (self.connected && !self.sessionOpened) {
@@ -427,6 +421,7 @@ class ConnectionManager: RCTEventEmitter{
   }
   
   @objc open func startSendingCoordinates(_ once: Bool) {
+    log.enqueue("CM.startSendingCoordinates \(self.connected)")
     let sendingManger = SendingManager.sharedSendingManager
     sendingManger.startSendingCoordinates(once)
   }
@@ -638,8 +633,8 @@ class ConnectionManager: RCTEventEmitter{
     }
     var answer : Int = 0;
     var name: String;
-    sendEvent(withName: "onMessageReceived", body: ["message": output])
-    
+    //self.emitter.sendEvent(withName: "onMessageReceived", body: ["message": output])
+    onMessageReceived.notify((output))
     if command == AnswTags.auth.rawValue {
       //ex: INIT|{"id":"CVH2SWG21GW","group":1,"motd":1429351583,"protocol":2,"v":0.88} || INIT|{"id":1,"error":"Token is invalid"}
       if let result = parseForErrorJson(output) {

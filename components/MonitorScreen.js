@@ -7,10 +7,21 @@ import { Text, View, Image, Platform, StatusBar, NativeModules } from 'react-nat
 
 export default class MonitorScreen extends React.Component {
   TrackerClick() {
-    const {ConnectionManager} = NativeModules;
-    ConnectionManager.startSendingCoordinates(false);
+    const {OsMoEventEmitter} = NativeModules;
+    if (this.props.screenProps.appState.tracker.state == 'stop'){
+      OsMoEventEmitter.startSendingCoordinates(false);
+    } else {
+      OsMoEventEmitter.stopSendingCoordinates();
+    }
     console.log('tracker clicked');
 
+  }
+  getStateIconName (){
+    if (this.props.screenProps.appState.tracker.state == 'stop') {
+      return 'ios-play';
+    } else {
+      return 'ios-square';
+    }
   }
   render() {
     return (
@@ -45,7 +56,7 @@ export default class MonitorScreen extends React.Component {
           <Text style={{color:'lightgray',fontSize:20}}>{this.props.screenProps.appState.device}</Text>
         </View>
         <View style={{flexDirection: 'row', margin: 5 }}>
-          <Ionicons name='ios-play' size={140} color='#FB671E' onPress={() => this.TrackerClick()}/>
+          <Ionicons name={this.getStateIconName()} size={140} color='#FB671E' onPress={() => this.TrackerClick()}/>
           <Ionicons style={{paddingLeft:20,alignSelf: "flex-end"}} name='ios-pause' size={80} color='#FB671E' />
         </View>
         <View style={{flexDirection: 'row'}}>

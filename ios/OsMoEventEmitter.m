@@ -1,5 +1,5 @@
 //
-//  ConnectionManager.m
+//  OsMoEventEmitter.m
 //  OsMo
 //
 //  Created by Alexey Sirotkin on 04.08.2019.
@@ -11,8 +11,9 @@
 #import "React/RCTEventEmitter.h"
 
 
-@interface RCT_EXTERN_MODULE(ConnectionManager, RCTEventEmitter)
+@interface RCT_EXTERN_MODULE(OsMoEventEmitter, RCTEventEmitter)
 RCT_EXTERN_METHOD(connect)
 RCT_EXTERN_METHOD(getMessageOfTheDay)
 RCT_EXTERN_METHOD(startSendingCoordinates:(BOOL)once)
+RCT_EXTERN_METHOD(stopSendingCoordinates)
 @end

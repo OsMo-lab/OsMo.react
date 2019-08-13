@@ -64,8 +64,9 @@
 		4D190C8122F71F5800E3574E /* GroupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D190C8022F71F5800E3574E /* GroupManager.swift */; };
 		4D190C8422F7216D00E3574E /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D190C8222F7216D00E3574E /* Extensions.swift */; };
 		4D190C8522F7216D00E3574E /* SendingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D190C8322F7216D00E3574E /* SendingManager.swift */; };
-		4D190C8722F7324500E3574E /* ConnectionManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D190C8622F7324500E3574E /* ConnectionManager.m */; };
+		4D190C8722F7324500E3574E /* OsMoEventEmitter.m in Sources */ = {isa = PBXBuildFile; fileRef = 4D190C8622F7324500E3574E /* OsMoEventEmitter.m */; };
 		4D190C8922F758C600E3574E /* settings.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4D190C8822F758C600E3574E /* settings.plist */; };
+		4D87783B23032B6000F8C7BC /* OsMoEventEmitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D87783A23032B6000F8C7BC /* OsMoEventEmitter.swift */; };
 		503B4A31E2CD4561ADF64E66 /* Fontisto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 145C447EF5E048379382FB69 /* Fontisto.ttf */; };
 		522D8CED0A7643A4987EC056 /* MaterialIcons.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 92D050BAAF514D3BBA512B48 /* MaterialIcons.ttf */; };
 		64C5EFAC53FE4485B4BF2D55 /* libRNDeviceInfo-tvOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E46627F6E71C4814AE1331DB /* libRNDeviceInfo-tvOS.a */; };
@@ -456,8 +457,9 @@
 		4D190C8022F71F5800E3574E /* GroupManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupManager.swift; sourceTree = "<group>"; };
 		4D190C8222F7216D00E3574E /* Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		4D190C8322F7216D00E3574E /* SendingManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SendingManager.swift; sourceTree = "<group>"; };
-		4D190C8622F7324500E3574E /* ConnectionManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ConnectionManager.m; sourceTree = "<group>"; };
+		4D190C8622F7324500E3574E /* OsMoEventEmitter.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OsMoEventEmitter.m; sourceTree = "<group>"; };
 		4D190C8822F758C600E3574E /* settings.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = settings.plist; sourceTree = "<group>"; };
+		4D87783A23032B6000F8C7BC /* OsMoEventEmitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsMoEventEmitter.swift; sourceTree = "<group>"; };
 		5D2D424DD5A04D6F8E49E5AF /* libTcpSockets.a */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = archive.ar; path = libTcpSockets.a; sourceTree = "<group>"; };
 		5E91572D1DD0AC6500FF2AA8 /* RCTAnimation.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTAnimation.xcodeproj; path = "../node_modules/react-native/Libraries/NativeAnimation/RCTAnimation.xcodeproj"; sourceTree = "<group>"; };
 		61A3F596DFE94C1BB02F3677 /* FontAwesome.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome.ttf"; sourceTree = "<group>"; };
@@ -649,8 +651,9 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB11A68108700A75B9A /* LaunchScreen.xib */,
 				13B07FB71A68108700A75B9A /* main.m */,
+				4D87783A23032B6000F8C7BC /* OsMoEventEmitter.swift */,
+				4D190C8622F7324500E3574E /* OsMoEventEmitter.m */,
 				4D190C5822F7149100E3574E /* ConnectionManager.swift */,
-				4D190C8622F7324500E3574E /* ConnectionManager.m */,
 				4D190C5B22F7161800E3574E /* ConnectionHelper.swift */,
 				4D190C8322F7216D00E3574E /* SendingManager.swift */,
 				4D190C8022F71F5800E3574E /* GroupManager.swift */,
@@ -1441,10 +1444,11 @@
 				4D190C6322F7161A00E3574E /* Enums.swift in Sources */,
 				4D190C6722F7161A00E3574E /* LocationModel.swift in Sources */,
 				4D190C8422F7216D00E3574E /* Extensions.swift in Sources */,
-				4D190C8722F7324500E3574E /* ConnectionManager.m in Sources */,
+				4D190C8722F7324500E3574E /* OsMoEventEmitter.m in Sources */,
 				4D190C7F22F71E9400E3574E /* Point.swift in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				4D190C7122F71B5C00E3574E /* LocationTracker.swift in Sources */,
+				4D87783B23032B6000F8C7BC /* OsMoEventEmitter.swift in Sources */,
 				4D190C7A22F71D9800E3574E /* XML.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

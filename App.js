@@ -1,14 +1,8 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Text, View, NativeModules,NativeEventEmitter } from 'react-native';
-
-// instantiate the event emitter
-
-const process = require('process');
 import { createBottomTabNavigator, createAppContainer } from 'react-navigation';
 
-
-// You can import from local files
 import AccountScreen from './components/AccountScreen';
 import HistoryScreen from './components/HistoryScreen';
 import MonitorScreen from './components/MonitorScreen';
@@ -21,7 +15,6 @@ const servUrl = "https://api.osmo.mobi/serv?" // to get server info
 const apiUrl = "https://api.osmo.mobi/iProx?"
 const OsmoAppKey = "Jdf43G_fVl3Opa42"
 
-import DeviceInfo from 'react-native-device-info';
 
 class IconWithBadge extends React.Component {
     render() {
@@ -76,79 +69,37 @@ export default class App extends React.Component {
             motdtime:0,
             permanent: 0,
         }
-        this.connectionManager;
+        this.eventEmitter;
         this.onAUTH;
         this.onMOTDUpdate;
     }
 
-  /*  
-    connectToServer(address) {
-        //process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
-  
-        let srv = address.split(':');
-        let config = {
-            address: srv[0], //ip address of server
-            port: srv[1], //port of socket server
-            reconnect: true, //OPTIONAL (default false): auto-reconnect on lost server
-            reconnectDelay: 500, //OPTIONAL (default 500ms): how often to try to auto-reconnect
-            maxReconnectAttempts: 10, //OPTIONAL (default infinity): how many time to attemp to auto-reconnect
-
-        }
-    }
-
-    getServerInfo(key) {
-        return fetch(servUrl, {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                },
-                body: 'app=' + OsmoAppKey,
-            })
-            .then((response) => response.json())
-            .then((responseJson) => {
-                this.state.log.push({ message: JSON.stringify(responseJson) });
-
-                this.setState({
-                    isLoading: false,
-                }, function() {
-                    this.state.log.push({ message: 'Received server info' });
-                    this.connectToServer(responseJson.address);
-                });
-            })
-            .catch((error) => {
-                console.error(error);
-            });
-    }
-*/
     componentDidMount() {
 
         this.state.groups.push({ name: 'Group 1', uid: 1 });
         this.state.groups.push({ name: 'Group 2', uid: 2 });
 
-        const {ConnectionManager} = NativeModules;
-        //const {SendingManager} = NativeModules;
+        const {OsMoEventEmitter} = NativeModules;
         
-        this.connectionManager = new NativeEventEmitter(ConnectionManager);
-        //this.sendingManager = new NativeEventEmitter(SendingManager);
+        this.eventEmitter = new NativeEventEmitter(OsMoEventEmitter);
+       
 
-
-        onMessageReceived = this.connectionManager.addListener("onMessageReceived",
+        onMessageReceived = this.eventEmitter.addListener("onMessageReceived",
         res => {
             this.state.log.push({message:JSON.stringify(res)});
             let output = res.message;
             let command = output.split('|');
             if (command.length == 2) {
                 if (command[0] == 'AUTH' ) {
-                    let auth = JSON.parse(command[1]);
-                    this.setState({device: auth.id});
-                    if (auth.uid > 0) {
-                        this.setState({userNick : auth.name});
+                    let resp = JSON.parse(command[1]);
+                    this.setState({device: resp.id});
+                    if (resp.uid > 0) {
+                        this.setState({userNick : resp.name});
                     }
-                    this.setState({permanent : auth.permanent});
-                    if (this.state.motdtime < auth.motd) {
-                        this.setState({motdtime : auth.motd});
-                        ConnectionManager.getMessageOfTheDay();
+                    this.setState({permanent : resp.permanent});
+                    if (this.state.motdtime < resp.motd) {
+                        this.setState({motdtime : resp.motd});
+                        OsMoEventEmitter.getMessageOfTheDay();
                     }    
                     this.state.log.push({message:JSON.stringify(res)});
                     return;
@@ -157,17 +108,27 @@ export default class App extends React.Component {
                     this.setState({motd : command[1]});
                     return;
                 }
+                if (command[0] == 'TO') {
+                    let resp = JSON.parse(command[1]);
+                    this.setState({tracker:{state:'run',id:resp.url}});
+                    return;
+                }
+                if (command[0] == 'TC') {
+                    let resp = JSON.parse(command[1]);
+                    this.setState({tracker:{state:'stop',id:''}});
+                    return;
+                }
+
             }
         }
         );  
          
-        //ConnectionManager.connect();
+        OsMoEventEmitter.connect();
     }
 
+ 
     componentWillUnmount() {
-        this.connectionManager.remove();
-        //onMOTDUpdate.remove();
-        //onAUTH.remove();
+        this.eventEmitter.remove();
     }
 
     render() {

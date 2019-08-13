@@ -126,16 +126,8 @@ open class LocationTracker: NSObject, CLLocationManagerDelegate {
         log.enqueue("LT.didUpdateLocations")
         var prevLM = allSessionLocations.last
         var prev_loc = locations.first
-        /*
-        if ((lastLocations.last) != nil) {
-            //prev_loc = CLLocation(latitude: (lastLocations.last?.lat)!, longitude: (lastLocations.last?.lon)!)
-            
-            prev_loc = CLLocation(coordinate: CLLocationCoordinate2D(latitude: (lastLocations.last?.lat)!, longitude: (lastLocations.last?.lon)!), altitude: CLLocationDistance((lastLocations.last?.alt)!), horizontalAccuracy: CLLocationAccuracy((lastLocations.last?.accuracy)!), verticalAccuracy: 0, timestamp: (lastLocations.last?.time)!)
- 
-        }*/
+      
         if (prevLM != nil) {
-            //prev_loc = CLLocation(latitude: (lastLocations.last?.lat)!, longitude: (lastLocations.last?.lon)!)
-            
             prev_loc = CLLocation(coordinate: CLLocationCoordinate2D(latitude: (prevLM?.lat)!, longitude: (prevLM?.lon)!), altitude: CLLocationDistance((prevLM?.alt)!), horizontalAccuracy: CLLocationAccuracy((prevLM?.accuracy)!), verticalAccuracy: 0, timestamp: (prevLM?.time)!)
             
         }

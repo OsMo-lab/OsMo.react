@@ -44,13 +44,10 @@ class SendingManager: NSObject{
         
         self.onLocationUpdated = locationTracker.locationUpdated.add {
             if self.connectionManager.isGettingLocation  {
-
                 self.connectionManager.sendCoordinate($0)
                 self.connectionManager.isGettingLocation = false
-                //self.locationTracker.locationUpdated.remove(self.onLocationUpdated!)
             }
         }
-
     }
 
 
@@ -59,7 +56,7 @@ class SendingManager: NSObject{
         if (once) {
             return
         }
-
+        log.enqueue("SM.startSendingCoordinates \(connectionManager.connected)")
         if !connectionManager.connected {
             self.onConnectionRun = connectionManager.connectionRun.add{
                 if $0.0 == 0{
