@@ -6,7 +6,7 @@
         {
             "label": "run iOS",
             "type": "shell",
-            "command": "react-native run-ios",
+            "command": "react-native run-ios --verbose",
             "problemMatcher": []
         },
         {
