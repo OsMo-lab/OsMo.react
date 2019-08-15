@@ -6,13 +6,7 @@
         {
             "label": "run iOS",
             "type": "shell",
-            "command": "react-native run-ios --configuration Debug",
-            "problemMatcher": []
-        },
-        {
-            "label": "run iOS for release",
-            "type": "shell",
-            "command": "react-native run-ios --configuration Release",
+            "command": "react-native run-ios --verbose",
             "problemMatcher": []
         },
         {
