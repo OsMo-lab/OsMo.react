@@ -1,26 +1,41 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Text, View, Image, Platform, StatusBar, NativeModules } from 'react-native';
-
+const {OsMoEventEmitter} = NativeModules;
+  
 
 
 
 export default class MonitorScreen extends React.Component {
   TrackerClick() {
-    const {OsMoEventEmitter} = NativeModules;
     if (this.props.screenProps.appState.tracker.state == 'stop'){
       OsMoEventEmitter.startSendingCoordinates(false);
     } else {
       OsMoEventEmitter.stopSendingCoordinates();
     }
-    console.log('tracker clicked');
-
   }
+
+  TrackerPauseClick() {
+    if (this.props.screenProps.appState.tracker.state == 'run'){
+      OsMoEventEmitter.startSendingCoordinates(false);
+    } else {
+      OsMoEventEmitter.stopSendingCoordinates();
+    }
+  }
+  
   getStateIconName (){
     if (this.props.screenProps.appState.tracker.state == 'stop') {
       return 'ios-play';
     } else {
       return 'ios-square';
+    }
+  }
+
+  getPauseIconName (){
+    if (this.props.screenProps.appState.tracker.state == 'run') {
+      return 'ios-pause';
+    } else {
+      return 'ios-play';
     }
   }
   render() {
@@ -56,8 +71,9 @@ export default class MonitorScreen extends React.Component {
           <Text style={{color:'lightgray',fontSize:20}}>{this.props.screenProps.appState.device}</Text>
         </View>
         <View style={{flexDirection: 'row', margin: 5 }}>
-          <Ionicons name={this.getStateIconName()} size={140} color='#FB671E' onPress={() => this.TrackerClick()}/>
-          <Ionicons style={{paddingLeft:20,alignSelf: "flex-end"}} name='ios-pause' size={80} color='#FB671E' />
+          <Ionicons name={this.getStateIconName()} size={140} color='#FB671E' backgroundColor="green" onPress={() => this.TrackerClick()}/>
+          {this.props.screenProps.appState.tracker.state == 'run' ? <Ionicons backgroundColor="white" style={{paddingLeft:20,paddingBottom:20,alignSelf: "flex-end"}} name={this.getPauseIconName()} size={80} color='#FB671E' onPress={() => this.TrackerPauseClick()}/> : null}
+          
         </View>
         <View style={{flexDirection: 'row'}}>
           <Text style={{color:'white'}}>{this.props.screenProps.appState.motd}</Text>

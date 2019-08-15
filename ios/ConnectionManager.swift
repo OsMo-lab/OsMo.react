@@ -376,6 +376,13 @@ class ConnectionManager: NSObject{
     }
   }
   
+  open func pauseSession(){
+    if (self.connected) {
+      let request = "\(Tags.pauseSession.rawValue)"
+      send(request: request)
+    }
+  }
+  
   open func closeSession(){
     log.enqueue("CM.closeSession")
     

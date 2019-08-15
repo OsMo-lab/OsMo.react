@@ -8,6 +8,8 @@
 
 import Foundation
 
+var hasListeners : Bool = false;
+
 @objc (OsMoEventEmitter)
 class OsMoEventEmitter: RCTEventEmitter{
   let connectionManager =  ConnectionManager.sharedConnectionManager;
@@ -25,10 +27,12 @@ class OsMoEventEmitter: RCTEventEmitter{
   override init() {
     super.init()
     _ = connectionManager.onMessageReceived.add{
-      self.sendEvent(withName: "onMessageReceived", body: ["message": $0])
+      if (hasListeners) {
+        self.sendEvent(withName: "onMessageReceived", body: ["message": $0])
+      }
     }
-    
   }
+  
   override func supportedEvents() -> [String]! {
     return ["onMessageReceived"]
   }
@@ -37,6 +41,13 @@ class OsMoEventEmitter: RCTEventEmitter{
     return true
   }
   
+  override func startObserving() {
+    hasListeners = true;
+    
+  }
+  override func stopObserving() {
+    hasListeners = false
+  }
   @objc func connect(){
     connectionManager.connect()
   }
@@ -47,6 +58,10 @@ class OsMoEventEmitter: RCTEventEmitter{
   
   @objc open func stopSendingCoordinates () {
     sendingManger.stopSendingCoordinates()
+  }
+
+  @objc open func pauseSendingCoordinates () {
+    sendingManger.pauseSendingCoordinates()
   }
   
   @objc open func getMessageOfTheDay() {

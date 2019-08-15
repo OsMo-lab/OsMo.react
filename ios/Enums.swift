@@ -14,6 +14,7 @@ enum Tags: String {
     case auth = "AUTH|"
     case messageDay = "MD"
     case openSession = "TO"
+    case pauseSession = "TP"
     case closeSession = "TC"
     case ping = "P"
     case getGroups = "GROUP"

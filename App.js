@@ -105,17 +105,21 @@ export default class App extends React.Component {
                     return;
                 }
                 if (command[0] == 'MD') {
-                    this.setState({motd : command[1]});
+                    let st = Object.assign(this.state,{motd : command[1]});
+                    this.setState(st);
                     return;
                 }
                 if (command[0] == 'TO') {
                     let resp = JSON.parse(command[1]);
-                    this.setState({tracker:{state:'run',id:resp.url}});
+                    this.setState({tracker:{state:'run',id:resp.url, distance:0,time:0,speed:0}});
                     return;
                 }
                 if (command[0] == 'TC') {
                     let resp = JSON.parse(command[1]);
-                    this.setState({tracker:{state:'stop',id:''}});
+                    let tracker = Object.assign(this.state.tracker,{state:'stop',id:''} );
+
+                    //this.setState({tracker:{state:'stop',id:'',speed:curTracker.speed, time:curTracker.time, distance:curTracker.distance}});
+                    this.setState({tracker:tracker});
                     return;
                 }
 

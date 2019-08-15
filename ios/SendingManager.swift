@@ -98,6 +98,7 @@ class SendingManager: NSObject{
         self.lcSendTimer = nil
         sessionPaused.notify((0))
         UIApplication.shared.isIdleTimerDisabled = false
+        connectionManager.pauseSession()
         
     }
     
