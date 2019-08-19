@@ -9,6 +9,9 @@ import com.facebook.react.ReactPackage;
 import com.facebook.react.shell.MainReactPackage;
 import com.facebook.soloader.SoLoader;
 
+
+import com.osmo.OsMoEventPackage;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -24,7 +27,8 @@ public class MainApplication extends Application implements ReactApplication {
     protected List<ReactPackage> getPackages() {
       return Arrays.<ReactPackage>asList(
           new MainReactPackage(),
-              new VectorIconsPackage()
+              new VectorIconsPackage(),
+              new OsMoEventPackage()
       );
     }
 
