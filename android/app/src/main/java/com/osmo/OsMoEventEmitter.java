@@ -26,11 +26,13 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule{
 
     @ReactMethod
     public void connect() {
+
         return;
     }
 
     @ReactMethod
     public void getMessageOfTheDay() {
+
         return;
     }
 
@@ -39,8 +41,15 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule{
     public void startSendingCoordinates(Boolean once) {
         return;
     }
+
     @ReactMethod
     public void stopSendingCoordinates() {
+
+        return;
+    }
+
+    @ReactMethod
+    public void pauseSendingCoordinates() {
         return;
     }
 }
