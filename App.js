@@ -2,7 +2,7 @@ import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Text, View, NativeModules,NativeEventEmitter } from 'react-native';
 import { createBottomTabNavigator, createAppContainer } from 'react-navigation';
-
+import AsyncStorage from '@react-native-community/async-storage';
 import AccountScreen from './components/AccountScreen';
 import HistoryScreen from './components/HistoryScreen';
 import MonitorScreen from './components/MonitorScreen';
@@ -83,7 +83,6 @@ export default class App extends React.Component {
         
         this.eventEmitter = new NativeEventEmitter(OsMoEventEmitter);
        
-
         onMessageReceived = this.eventEmitter.addListener("onMessageReceived",
         res => {
             this.state.log.push({message:JSON.stringify(res)});
@@ -92,12 +91,26 @@ export default class App extends React.Component {
             if (command.length == 2) {
                 if (command[0] == 'AUTH' ) {
                     let resp = JSON.parse(command[1]);
+                    storeData = async () => {
+                        try {
+                          await AsyncStorage.setItem('device', resp.id)
+                        } catch (e) {
+                          // saving error
+                        }
+                    }
                     this.setState({device: resp.id});
                     if (resp.uid > 0) {
                         this.setState({userNick : resp.name});
                     }
                     this.setState({permanent : resp.permanent});
                     if (this.state.motdtime < resp.motd) {
+                        storeData = async () => {
+                            try {
+                              await AsyncStorage.setItem('motdtime', resp.motd)
+                            } catch (e) {
+                              // saving error
+                            }
+                        }
                         this.setState({motdtime : resp.motd});
                         OsMoEventEmitter.getMessageOfTheDay();
                     }    
@@ -117,8 +130,6 @@ export default class App extends React.Component {
                 if (command[0] == 'TC') {
                     let resp = JSON.parse(command[1]);
                     let tracker = Object.assign(this.state.tracker,{state:'stop',id:''} );
-
-                    //this.setState({tracker:{state:'stop',id:'',speed:curTracker.speed, time:curTracker.time, distance:curTracker.distance}});
                     this.setState({tracker:tracker});
                     return;
                 }
@@ -126,21 +137,84 @@ export default class App extends React.Component {
             }
         }
         );  
-         
-        OsMoEventEmitter.connect();
+        
+        getData = async () => {
+            try {
+              const value = await AsyncStorage.getItem('device')
+              if(value !== null) {
+                this.setState({device: value});
+              }
+            } catch(e) {
+              // error reading value
+            }
+        }
+        getData = async () => {
+            try {
+              const value = await AsyncStorage.getItem('motdtime')
+              if(value !== null) {
+                this.setState({motdtime: value});
+              }
+            } catch(e) {
+              // error reading value
+            }
+        }
+        OsMoEventEmitter.connect(this.state.device);
     }
 
- 
+    
+
     componentWillUnmount() {
         this.eventEmitter.remove();
     }
 
     render() {
-        return <AppContainer screenProps = {
-            { appState: this.state }
-        }
-        />;
+        let props = {
+            appState: this.state,
+            onResetAuthorization: () => this.onResetAuthorization() 
+        }; 
+        return <AppContainer screenProps = {props}/>;
     }
+
+    
+    clearKeys() {
+        console.log('clearKeys');    
+        
+        
+        this.state.log.push({message:'clearKeys'});
+        removeValue = async () => {
+            try {
+              await AsyncStorage.removeItem('device')
+            } catch(e) {
+              // remove error
+            }
+        }
+        removeValue = async () => {
+            try {
+              await AsyncStorage.removeItem('trackerid')
+            } catch(e) {
+              // remove error
+            }
+        }
+        removeValue = async () => {
+            try {
+              await AsyncStorage.removeItem('user')
+            } catch(e) {
+              // remove error
+            }
+        }
+        let tracker = Object.assign(this.state.tracker,{state:'stop',id:''} );
+        this.setState({device:'',motd:'', motdtime:0,userNick:'unknown',tracker:tracker});
+        
+    }
+
+    
+    onResetAuthorization() {
+        console.log(this.state);
+        if (this.state.tracker.state == 'stop'){
+            this.clearKeys();
+        }
+    }
+    
 }
 
 const AppNavigator = createBottomTabNavigator({

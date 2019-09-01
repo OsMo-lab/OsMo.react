@@ -8,6 +8,7 @@
     "postinstall": "./node_modules/.bin/rn-nodeify --install util,process,os,stream --hack"
   },
   "dependencies": {
+    "@react-native-community/async-storage": "^1.6.1",
     "react": "^16.8.6",
     "react-native": "0.59.9",
     "react-native-device-info": "^2.1.3",

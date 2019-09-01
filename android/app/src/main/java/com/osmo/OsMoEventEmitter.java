@@ -1,19 +1,203 @@
 package com.osmo;
 
+import com.osmo.Netutil.MyAsyncTask;
+
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.Point;
+import android.location.GpsStatus;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.net.TrafficStats;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Message;
+import android.os.SystemClock;
+import android.speech.tts.TextToSpeech;
+import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationCompat;
+import android.telephony.SmsManager;
+import android.util.Log;
+import android.widget.Toast;
+
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
+import org.json.JSONArray;
+import org.osmdroid.api.IGeoPoint;
+import org.osmdroid.util.GeoPoint;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.net.Socket;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.HashMap;
 
 import javax.annotation.Nonnull;
+import javax.net.ssl.SSLSocket;
+
+import static java.lang.StrictMath.abs;
+import static org.osmdroid.util.GeometryMath.DEG2RAD;
+import static org.osmdroid.util.constants.GeoConstants.RADIUS_EARTH_METERS;
 
 
-public class OsMoEventEmitter extends ReactContextBaseJavaModule{
+public class OsMoEventEmitter extends ReactContextBaseJavaModule implements ResultsListener, LocationListener, GpsStatus.Listener{
+
+    private ReactContext mReactContext;
+
+    static NotificationManager mNotificationManager;
+
+    static final int OSMODROID_ID = 1;
+
+    //Network
+    private MyAsyncTask sendidtask;
+    volatile private boolean checkadressing = false;
+    static long startTraffic = 0;
+    int socketRetryInt = 0;
+    private int workserverint = -1;
+    private String workservername = "";
+    Thread connectThread;
+    public Socket socket;
+    public SSLSocket sslsocket;
+    volatile public boolean authed = false;
+    volatile protected boolean running = false;
+    volatile protected boolean connOpened = false;
+    volatile protected boolean connecting = false;
+    volatile public boolean needopensession = false;
+    volatile public boolean needclosesession = false;
+
+    ArrayList<String> executedCommandArryaList = new ArrayList<String>();
+
+    private IMWriter iMWriter;
+    private IMReader iMReader;
+
+    private Intent in;
+
+    final static DecimalFormatSymbols dot = new DecimalFormatSymbols();
+    final static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    final static SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    final static SimpleDateFormat sdf2 = new SimpleDateFormat("yyyyMMddHHmmss");
+    final static DecimalFormat df1 = new DecimalFormat("#######0.0" , DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+    final static DecimalFormat df2 = new DecimalFormat("#######0.00", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+    final static DecimalFormat df0 = new DecimalFormat("########", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+    final static DecimalFormat df6 = new DecimalFormat("########.######", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+
+    //Location vars
+    public static LocationManager myManager;
+
+    long sessionopentime;
+    Boolean state = false;
+
+    static boolean paused = false;
+    static float  maxspeed = 0;
+
+    int totalclimb;
+    int altitude=Integer.MIN_VALUE;
+    int prevaltitude=Integer.MIN_VALUE;
+    int[] altitudesamples = {Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE,Integer.MIN_VALUE};
+    float avgspeed;
+    float currentspeed;
+    long timeperiod = 0;
+    float workdistance;
+    long workmilli = 0;
+    private int distance;
+    private float bearing;
+    private int speedbearing_gpx;
+    private int bearing_gpx;
+
+
+    private long lastgpslocationtime = 0;
+    long prevnetworklocationtime = 0;
+    private int period;
+
+    private String accuracy = "";
+    public String motd = "";
+
+    Boolean sessionstarted = false;
+    Boolean globalsend = false;
+    Boolean sos = false;
+    Boolean signalisationOn = false;
+
+
+
+    private String gpxbuffer = new String();
+    private boolean usebuffer = false;
+
+    private boolean firstsend = true;
+    private boolean sended = true;
+    private boolean gpx = false;
+    private boolean live = true;
+    private int hdop;
+    private String lastsay = "a";
+    private String position;
+    private long lastsmstime=0;
+
+    private int hdop_gpx;
+    private int period_gpx;
+    private int distance_gpx;
+    private int speed_gpx;
+    protected boolean firstgpsbeepedon = false;
+    private Location prevlocation;
+    public static Location currentLocation;
+    private Location prevlocation_gpx;
+    private Location prevlocation_spd;
+
+    private boolean fileheaderok = false;
+    private File fileName = null;
+
+    int sendcounter;
+    int writecounter = 0;
+    int buffercounter = 0;
+    int intKM;
+    private int pollperiod = 0;
+    private double brng;
+    private double brng_gpx;
+    private double prevbrng;
+    private double prevbrng_gpx;
+
+    String sending = "";
+
+    private int lcounter = 0;
+    private int scounter = 0;
+    private File fileName = null;
+    protected static boolean uploadto = false;
+
+    TextToSpeech tts;
+
+    ArrayList<String> buffer = new ArrayList<String>();
+    ArrayList<String> sendingbuffer = new ArrayList<String>();
+
+    StringBuilder buffersb = new StringBuilder(327681);
+    StringBuilder lastbuffersb = new StringBuilder(327681);
+    StringBuilder sendedsb = new StringBuilder(327681);
+
+    public static ArrayList<Entry> speeddistanceEntryList = new ArrayList<Entry>();
+    public static ArrayList<Entry> avgspeeddistanceEntryList = new ArrayList<Entry>();
+    public static ArrayList<Entry> altitudedistanceEntryList = new ArrayList<Entry>();
+    public static ArrayList<String> distanceStringList = new ArrayList<String>();
+    NotificationCompat.Builder foregroundnotificationBuilder;
+
+
+
     @Nonnull
     @Override
     public String getName() {
@@ -21,18 +205,39 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule{
     }
 
     public OsMoEventEmitter(ReactApplicationContext reactContext) {
+
         super(reactContext);
+        this.mReactContext = reactContext;
+    }
+
+    private void sendEvent(ReactContext reactContext,
+                           String eventName,
+                           @Nullable WritableMap params) {
+        reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventName, params);
     }
 
     @ReactMethod
-    public void connect() {
+    public void connect(String device) {
+        APIcomParams params = null;
+        params = new APIcomParams("https://api.osmo.mobi/serv?app="+ "app" +"&id=" + device, "", "checkaddres");
 
+        sendidtask = new Netutil.MyAsyncTask(this);
+        sendidtask.execute(params);
+
+        Log.d(this.getClass().getSimpleName(), "connect() OsMoEventEmitter with key:" + device);
+
+        /*
+        WritableMap params = Arguments.createMap();
+        params.putString("message","MD|Lets rock !");
+        this.sendEvent(this.mReactContext,"onMessageReceived",params);
+        */
         return;
     }
 
     @ReactMethod
     public void getMessageOfTheDay() {
-
         return;
     }
 
@@ -52,4 +257,1069 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule{
     public void pauseSendingCoordinates() {
         return;
     }
+
+    private void setReconnectOnError()
+    {
+        try
+        {
+            if (socket != null)
+            {
+                socket.close();
+            }
+        }
+        catch (IOException e)
+        {
+            //writeException(e);
+            e.printStackTrace();
+        }
+        //disablekeepAliveAlarm();
+        authed = false;
+        connecting = false;
+        connOpened = false;
+
+        running = false;
+    }
+    @Override
+    public void onResultsSucceeded(APIComResult result)
+    {
+        checkadressing = false;
+
+
+
+        Log.d(getClass().getSimpleName(), "OnResultSucceded " + result.rawresponse);
+        if (result.Command.equals("checkaddres") && !(result.Jo == null))
+        {
+            socketRetryInt = 0;
+            if (result.Jo.has("address"))
+            {
+                try
+                {
+                    workservername = result.Jo.optString("address").substring(0, result.Jo.optString("address").indexOf(':'));
+                    workserverint = Integer.parseInt(result.Jo.optString("address").substring(result.Jo.optString("address").indexOf(':') + 1));
+                    long servertime=result.Jo.optLong("time");
+                    if(servertime>0)
+                    {
+                    }
+
+                    try
+                    {
+                        connectThread.start();
+                    }
+                    catch (IllegalThreadStateException e)
+                    {
+                        Log.d(getClass().getSimpleName(), "hernya");
+                        setReconnectOnError();
+                        e.printStackTrace();
+                    }
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+                if(result.Jo.has("uid"))
+                {
+
+                    //senEvent
+                }
+            }
+            else
+            {
+                if (result.Jo.optInt("error") == 10 || result.Jo.optInt("error") == 100 || result.Jo.optString("token").equals("false"))
+                {
+                    //sendEVent
+                }
+                else if (result.Jo.optInt("error") == 67 || result.Jo.optInt("error") == 68 || result.Jo.optInt("error") == 69)
+                {
+                 //SendEvent
+                }
+                else if (result.Jo.optInt("error") == 21 )
+                {
+                    //sendEvent
+                }
+            }
+        }
+        else
+        {
+            socketRetryInt++;
+            Log.d(getClass().getSimpleName(), "herrrr");
+            setReconnectOnError();
+            WritableMap params = Arguments.createMap();
+            params.putString("message","MD|Error !");
+            this.sendEvent(this.mReactContext,"onMessageReceived",params);
+        }
+    }
+
+    public void startServiceWork(boolean opensession)
+    {
+        if (!paused)
+        {
+            altitudedistanceEntryList.clear();
+            avgspeeddistanceEntryList.clear();;
+            speeddistanceEntryList.clear();
+            distanceStringList.clear();
+            writecounter=0;
+            sendingbuffer.clear();
+            totalclimb=0;
+            altitude=Integer.MIN_VALUE;
+
+
+
+            firstsend = true;
+            avgspeed = 0;
+            maxspeed = 0;
+            intKM = 0;
+            workdistance = 0;
+            timeperiod = 0;
+            workmilli = 0;
+            buffercounter = 0;
+            buffersb.setLength(0);
+            lastbuffersb.setLength(0);
+            sendedsb.setLength(0);
+            lcounter = 0;
+            scounter = 0;
+            sendcounter = 0;
+            sended = true;
+            sending = "";
+
+            boolean crtfile = false;
+            if (gpx)
+            {
+                openGPX();
+            }
+        }
+        //setPause(false);
+        requestLocationUpdates(this);
+        /*
+        int icon = R.drawable.eye;
+        CharSequence tickerText = getString(R.string.monitoringstarted); //getString(R.string.Working);
+        long when = System.currentTimeMillis();
+        Intent notificationIntent = new Intent(this, GPSLocalServiceClient.class);
+        notificationIntent.setAction(Intent.ACTION_MAIN);
+        notificationIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        osmodroidLaunchIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+        foregroundnotificationBuilder = new NotificationCompat.Builder(this,"default");
+        foregroundnotificationBuilder.setWhen(System.currentTimeMillis());
+        foregroundnotificationBuilder.setContentText(tickerText);
+        foregroundnotificationBuilder.setContentTitle("OsMoDroid");
+        foregroundnotificationBuilder.setSmallIcon(icon);
+        foregroundnotificationBuilder.setContentIntent(osmodroidLaunchIntent);
+        foregroundnotificationBuilder.setChannelId("silent");
+
+        Intent is = new Intent(this, this.class);
+        is.putExtra("ACTION", "STOP");
+
+        PendingIntent stop = PendingIntent.getService(this, 0, is, PendingIntent.FLAG_UPDATE_CURRENT);
+        foregroundnotificationBuilder.addAction(android.R.drawable.ic_delete, getString(R.string.stop_monitoring), stop);
+        Notification notification = foregroundnotificationBuilder.build();
+        //notification = new Notification(icon, tickerText, when);
+        //notification.setLatestEventInfo(getApplicationContext(), "OsMoDroid", getString(R.string.monitoringactive), osmodroidLaunchIntent);
+        startForeground(1, notification);
+        */
+        setstarted(true);
+        /*
+        if (live)
+        {
+            if (myIM != null && authed)
+            {
+                if(opensession) {
+                    sessionopentime = System.currentTimeMillis() / 1000;
+                    myIM.sendToServer("TO|"+sessionopentime, false);
+                    myIM.needopensession = true;
+                    myIM.needclosesession = false;
+                }
+            }
+            else
+            {
+                if(opensession) {
+                    myIM.needopensession = true;
+                    myIM.needclosesession = false;
+                }
+            }
+        }
+
+        if (tts != null && OsMoDroid.settings.getBoolean("usetts", false))
+        {
+            tts.speak(getString(R.string.letsgo), TextToSpeech.QUEUE_ADD, null);
+        }
+        */
+    }
+
+    public void requestLocationUpdates(LocationListener locationListener, String source, int interval) throws SecurityException
+    {
+        List<String> list = myManager.getAllProviders();
+        switch (source)
+        {
+            case ("gps"):
+                if (list.contains(LocationManager.GPS_PROVIDER)) {
+                    myManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, interval * 1000, 0, locationListener);
+                }
+                break;
+            case ("net"):
+                if (list.contains(LocationManager.NETWORK_PROVIDER)) {
+                    myManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, interval * 1000, 0, locationListener);
+                }
+                break;
+            case ("all"):
+                if (list.contains(LocationManager.GPS_PROVIDER)) {
+                    myManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, interval * 1000, 0, locationListener);
+                }
+                if (list.contains(LocationManager.NETWORK_PROVIDER)) {
+                    myManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, interval * 1000, 0, locationListener);
+                }
+
+                break;
+        }
+    }
+    public void requestLocationUpdates(LocationListener locationListener)
+    {
+        List<String> list = myManager.getAllProviders();
+        if (OsMoDroid.settings.getBoolean("usegps", true))
+        {
+            if (list.contains(LocationManager.GPS_PROVIDER))
+            {
+                try {
+                    myManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, pollperiod, 0, locationListener);
+                    myManager.addGpsStatusListener(this);
+                } catch (SecurityException e) {
+                    e.printStackTrace();
+                }
+            }
+            else
+            {
+
+                Log.d(this.getClass().getName(), "GPS провайдер не обнаружен");
+
+            }
+        }
+        if (OsMoDroid.settings.getBoolean("usenetwork", true))
+        {
+            if (list.contains(LocationManager.NETWORK_PROVIDER))
+            {
+                try {
+                    myManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, pollperiod, 0, locationListener);
+                } catch (SecurityException e) {
+                    e.printStackTrace();
+                }
+            }
+            else
+            {
+                Log.d(this.getClass().getName(), "NETWORK провайдер не обнаружен");
+            }
+        }
+    }
+    private void setstarted(boolean started)
+    {
+        state = started;
+        //refresh();
+    }
+
+    private void openGPX()
+    {
+        boolean crtfile;
+        String sdState = android.os.Environment.getExternalStorageState();
+        if (sdState.equals(android.os.Environment.MEDIA_MOUNTED))
+        {
+            File sdDir = android.os.Environment.getExternalStorageDirectory();
+            if (!OsMoDroid.settings.getString("sdpath", "").equals(""))
+            {
+                sdDir = new File(OsMoDroid.settings.getString("sdpath", ""));
+            }
+            else
+            {
+                SharedPreferences.Editor editor = OsMoDroid.settings.edit();
+                editor.putString("sdpath", sdDir.getPath());
+                editor.commit();
+            }
+            // SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+            String time = sdf2.format(new Date());
+            fileName = new File(sdDir, "OsMoDroid/");
+            fileName.mkdirs();
+            if (OsMoDroid.settings.getString("gpxname", "").equals(""))
+            {
+                fileName = new File(sdDir, "OsMoDroid/" + time + ".gpx");
+            }
+            else
+            {
+                fileName = new File(sdDir, "OsMoDroid/" + OsMoDroid.settings.getString("gpxname", ""));
+                fileheaderok = true;
+            }
+
+            if (!fileName.exists())
+            {
+                try
+                {
+                    crtfile = fileName.createNewFile();
+                    OsMoDroid.editor.putString("gpxname", fileName.getName());
+                    OsMoDroid.editor.commit();
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+                //if(log)Log.d(getClass().getSimpleName(), Boolean.toString(crtfile));
+                try
+                {
+                    // SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd'T'HH:mm:ssZ");
+                    time = sdf1.format(new Date(System.currentTimeMillis())) + "Z";
+                    FileWriter trackwr = new FileWriter(fileName);
+                    trackwr.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+                    trackwr.write("<gpx xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"1.1\" xmlns=\"http://www.topografix.com/GPX/1/1\" creator=\"OsMoDroid\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">");
+                    trackwr.write("<time>" + time + "</time>");
+                    trackwr.write("<trk>");
+                    trackwr.write("<name>" + time + "</name>");
+                    trackwr.write("<trkseg>");
+                    trackwr.flush();
+                    trackwr.close();
+                    fileheaderok = true;
+                }
+                catch (Exception e)
+                {
+                    //e.printStackTrace();
+                    Toast.makeText(this, getString(R.string.CanNotWriteHeader), Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+        else
+        {
+            Toast.makeText(this, R.string.nomounted, Toast.LENGTH_SHORT).show();
+        }
+    }
+    public void stopServiceWork(Boolean stopsession)
+    {
+        OsMoDroid.mFirebaseAnalytics.logEvent("STOP_TRIP",null);
+        OsMoDroid.editor.putFloat("lat", (float) currentLocation.getLatitude());
+        OsMoDroid.editor.putFloat("lon", (float) currentLocation.getLongitude());
+        OsMoDroid.editor.commit();
+        firstgpsbeepedon = false;
+
+        if (OsMoDroid.settings.getBoolean("playsound", false))
+        {
+            //soundPool.play(stopsound, 1f, 1f, 1, 0, 1f);
+            if (tts != null && OsMoDroid.settings.getBoolean("usetts", false))
+            {
+                tts.speak(getString(R.string.monitoring_stopped), TextToSpeech.QUEUE_ADD, null);
+            }
+        }
+        //am.cancel(pi);
+        if (live && stopsession)
+        {
+            //String[] params = {"http://a.t.esya.ru/?act=session_stop&hash="+OsMoDroid.settings.getString("hash", "")+"&n="+OsMoDroid.settings.getString("n", ""),"false","","session_stop"};
+            //APIcomParams params = new APIcomParams("http://a.t.esya.ru/?act=session_stop&hash="+OsMoDroid.settings.getString("hash", "")+"&n="+OsMoDroid.settings.getString("n", "")+"&ttl="+OsMoDroid.settings.getString("session_ttl", "30"),null,"session_stop");
+            //new Netutil.MyAsyncTask(this).execute(params);
+            if (authed)
+            {
+                if (sendingbuffer.size() == 0 && buffer.size() != 0)
+                {
+                    sendingbuffer.addAll(buffer.subList(0,buffer.size()>100?100:buffer.size()));
+                    buffer.removeAll(sendingbuffer);
+                    myIM.sendToServer("B|" + new JSONArray(sendingbuffer), false);
+                }
+                myIM.sendToServer("TC", false);
+                myIM.needclosesession = true;
+                myIM.needopensession = false;
+            }
+            else
+            {
+                needclosesession = true;
+                needopensession = false;
+            }
+            //buffer.clear();
+        }
+        if (gpx && fileheaderok && stopsession)
+        {
+            closeGPX();
+        }
+        if (myManager != null)
+        {
+            myManager.removeUpdates(this);
+        }
+        setstarted(false);
+        //stopForeground(true);
+        //updatewidgets();
+    }
+    /**
+     *
+     */
+    private void closeGPX()
+    {
+        try
+        {
+            FileWriter trackwr = new FileWriter(fileName, true);
+            String towright = gpxbuffer;
+            trackwr.write(towright.replace(",", "."));
+            gpxbuffer = "";
+            trackwr.write("</trkseg></trk></gpx>");
+            trackwr.flush();
+            trackwr.close();
+            fileheaderok = false;
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            Toast.makeText(LocalService.this, getString(R.string.CanNotWriteEnd), Toast.LENGTH_SHORT).show();
+        }
+        OsMoDroid.editor.remove("gpxname");
+        OsMoDroid.editor.commit();
+        if (fileName.length() > 1024 && uploadto)
+        {
+            upload(fileName);
+        }
+        if (fileName.length() < 1024)
+        {
+            fileName.delete();
+            Toast.makeText(LocalService.this, R.string.tracktoshort, Toast.LENGTH_LONG).show();
+        }
+    }
+    public void upload(File file)
+    {
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, new Intent(), 0);
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(
+                mReactContext.getApplicationContext(),"default")
+                .setWhen(System.currentTimeMillis())
+                .setContentText(file.getName())
+                .setContentTitle(getString(R.string.osmodroiduploadfile))
+                .setSmallIcon(android.R.drawable.arrow_up_float)
+                .setAutoCancel(true)
+                .setContentIntent(contentIntent)
+                .setProgress(100, 0, false).setChannelId("silent");
+        Notification notification = notificationBuilder.build();
+        int uploadid = OsMoDroid.uploadnotifyid();
+        mNotificationManager.notify(uploadid, notification);
+        Netutil.newapicommand((ResultsListener) LocalService.this, "tr_track_upload:1", file, notificationBuilder, uploadid);
+    }
+
+    public void onLocationChanged(Location location)
+    {
+
+        if (!state)
+        {
+            //LocalService.addlog("remove updates because state");
+            myManager.removeUpdates(this);
+        }
+        currentLocation.set(location);
+        if (LocalService.channelsDevicesAdapter != null && LocalService.currentChannel != null)
+        {
+            LocalService.channelsDevicesAdapter.notifyDataSetChanged();
+        }
+        accuracy = Integer.toString((int) location.getAccuracy());
+        if (System.currentTimeMillis() < lastgpslocationtime + pollperiod + 30000 && location.getProvider().equals(LocationManager.NETWORK_PROVIDER))
+        {
+            Log.d(this.getClass().getName(), "У нас есть GPS еще");
+            //LocalService.addlog("We still have GPS");
+            return;
+        }
+        else
+        {
+            //LocalService.addlog("We still have GPS -ELSE");
+        }
+        if (System.currentTimeMillis() > lastgpslocationtime + pollperiod + 30000 && location.getProvider().equals(LocationManager.NETWORK_PROVIDER))
+        {
+            Log.d(this.getClass().getName(), "У нас уже нет GPS");
+            //LocalService.addlog("Lost GPS till");
+            if ((location.distanceTo(prevlocation) > distance && System.currentTimeMillis() > (prevnetworklocationtime + period)))
+            {
+                prevnetworklocationtime = System.currentTimeMillis();
+                sendlocation(location,false);
+                return;
+            }
+            else
+            {
+                //LocalService.addlog("send on because networklocation - ELSE");
+            }
+        }
+        else
+        {
+            //LocalService.addlog("Lost GPS till - ELSE");
+        }
+        if (firstsend)
+        {
+            Log.d(this.getClass().getName(), "Первая отправка");
+            //LocalService.addlog("First send");
+            sendlocation(location,true);
+            prevlocation.set(location);
+            prevlocation_gpx.set(location);
+            prevlocation_spd = new Location("");
+            prevlocation_spd.set(location);
+            prevbrng = brng;
+            workmilli = System.currentTimeMillis();
+            firstsend = false;
+        }
+        else
+        {
+            //LocalService.addlog("First send - ELSE");
+        }
+        if (location.getSpeed() >= speed_gpx / 3.6 && (int) location.getAccuracy() < hdop_gpx && prevlocation_spd != null)
+        {
+            GeoPoint curGeoPoint = new GeoPoint(location);
+            GeoPoint prevGeoPoint = new GeoPoint(prevlocation_spd);
+            if (OsMoDroid.settings.getBoolean("imperial", false))
+            {
+                workdistance = workdistance +distanceBetween(curGeoPoint,prevGeoPoint)/ 1.609344f;//location.distanceTo(prevlocation_spd);
+            }
+            else
+            {
+                workdistance = workdistance + distanceBetween(curGeoPoint,prevGeoPoint);//location.distanceTo(prevlocation_spd);
+            }
+            if (OsMoDroid.settings.getBoolean("imperial", false))
+            {
+                if (OsMoDroid.settings.getBoolean("ttsavgspeed", false) && OsMoDroid.settings.getBoolean("usetts", false) && tts != null && !tts.isSpeaking() && ((int) workdistance) / 1000/1.609344 > intKM)
+                {
+                    intKM = (int)( workdistance / 1000/1.609344);
+                    tts.speak(getString(R.string.going) + ' ' + Integer.toString(intKM) + ' ' + "Miles" + ',' + getString(R.string.avg) + ' ' + OsMoDroid.df1.format(avgspeed * 3600) + ',' + getString(R.string.inway) + ' ' + formatInterval(timeperiod), TextToSpeech.QUEUE_ADD, null);
+
+                }
+            }
+            else
+            {
+                if (OsMoDroid.settings.getBoolean("ttsavgspeed", false) && OsMoDroid.settings.getBoolean("usetts", false) && tts != null && !tts.isSpeaking() && ((int) workdistance) / 1000 > intKM)
+                {
+                    intKM = (int) workdistance / 1000;
+                    tts.speak(getString(R.string.going) + ' ' + Integer.toString(intKM) + ' ' + "KM" + ',' + getString(R.string.avg) + ' ' + OsMoDroid.df1.format(avgspeed * 3600) + ',' + getString(R.string.inway) + ' ' + formatInterval(timeperiod), TextToSpeech.QUEUE_ADD, null);
+                }
+            }
+            //if(log)Log.d(this.getClass().getName(),"Log of Workdistance, Workdistance="+ Float.toString(workdistance)+" location="+location.toString()+" prevlocation_spd="+prevlocation_spd.toString()+" distanceto="+Float.toString(location.distanceTo(prevlocation_spd)));
+            prevlocation_spd.set(location);
+            GeoPoint geopoint = new GeoPoint(location);
+            //if(devlistener!=null){devlistener.onNewPoint(geopoint);}
+            mydev.devicePath.add(new SerPoint(new Point(geopoint.getLatitudeE6(), geopoint.getLongitudeE6())));
+        }
+        if ((int) location.getAccuracy() < hdop_gpx)
+        {
+            if(OsMoDroid.settings.getBoolean("imperial",false))
+            {
+                currentspeed = location.getSpeed()*0.621371f;
+                altitude= (int) (location.getAltitude()*3.28084);
+            }
+            else
+            {
+                currentspeed = location.getSpeed();
+                altitude= (int) location.getAltitude();
+            }
+
+
+            boolean filled=true;
+            int summ=0;
+            int meanaltitude=Integer.MIN_VALUE;
+
+
+            altitudesamples[altitudesamples.length-1] = altitude;
+
+            for( int index =0; index < altitudesamples.length-1 ; index++ )
+            {
+
+                altitudesamples[index]=altitudesamples[index+1];
+                if(altitudesamples[index]==Integer.MIN_VALUE)
+                {
+                    filled=false;
+                }
+                summ=summ+altitudesamples[index];
+            }
+
+
+            if(filled)
+            {
+                meanaltitude = summ / altitudesamples.length;
+                if (prevaltitude == Integer.MIN_VALUE)
+                {
+                    prevaltitude = meanaltitude;
+                }
+                else
+                {
+                    if (abs(meanaltitude - prevaltitude) > 5)
+                    {
+                        if (meanaltitude > prevaltitude)
+                        {
+                            totalclimb = totalclimb + meanaltitude - prevaltitude;
+                        }
+                        prevaltitude = meanaltitude;
+                    }
+                }
+            }
+
+            if(OsMoDroid.settings.getBoolean("imperial",false))
+            {
+                if (location.getSpeed()*0.621371f > maxspeed)
+                {
+                    maxspeed = location.getSpeed()*0.621371f;
+                }
+            }
+            else
+            {
+                if (location.getSpeed() > maxspeed)
+                {
+                    maxspeed = location.getSpeed();
+                }
+
+            }
+        }
+        //if(log)Log.d(this.getClass().getName(),"workmilli="+ Float.toString(workmilli)+" gettime="+location.getTime());
+        //if(log)Log.d(this.getClass().getName(),"diff="+ Float.toString(location.getTime()-workmilli));
+        if ((System.currentTimeMillis() - workmilli) > 0)
+        {
+            avgspeed = workdistance / (System.currentTimeMillis() - workmilli);
+            //if(log)Log.d(this.getClass().getName(),"avgspeed="+ Float.toString(avgspeed));
+        }
+        //if(log)Log.d(this.getClass().getName(), df0.format(location.getSpeed()*3.6).toString());
+        //if(log)Log.d(this.getClass().getName(), df0.format(prevlocation.getSpeed()*3.6).toString());
+        if (OsMoDroid.settings.getBoolean("ttsspeed", false) && OsMoDroid.settings.getBoolean("usetts", false) && tts != null && !tts.isSpeaking() && !(OsMoDroid.df0.format(location.getSpeed() * 3.6).toString()).equals(lastsay))
+        {
+            //if(log)Log.d(this.getClass().getName(), df0.format(location.getSpeed()*3.6).toString());
+            //if(log)Log.d(this.getClass().getName(), df0.format(prevlocation.getSpeed()*3.6).toString());
+            tts.speak(df0.format(location.getSpeed() * 3.6), TextToSpeech.QUEUE_ADD, null);
+            lastsay = df0.format(location.getSpeed() * 3.6).toString();
+        }
+        position = (OsMoDroid.df6.format(location.getLatitude()) + ", " + OsMoDroid.df6.format(location.getLongitude()) + "\nСкорость:" + OsMoDroid.df1.format(location.getSpeed() * 3.6)) + " Км/ч";
+        //position = ( String.format("%.6f", location.getLatitude())+", "+String.format("%.6f", location.getLongitude())+" = "+String.format("%.1f", location.getSpeed()));
+        //if (location.getTime()>lastfix+3000)notifygps(false);
+        //if (location.getTime()<lastfix+3000)notifygps(true);
+        timeperiod = System.currentTimeMillis() - workmilli;
+
+
+        for (int index = distanceStringList.size(); index <= (int) workdistance; index++)
+        {
+            distanceStringList.add(Integer.toString(index/1000)+','+Integer.toString(index%1000));
+        }
+        Entry e = new Entry((int) workdistance,currentspeed* 3.6f);
+        speeddistanceEntryList.add(e);
+        Entry avge = new Entry((int) workdistance,avgspeed * 3600f);
+        avgspeeddistanceEntryList.add(avge);
+        Entry alte = new Entry((int) workdistance,(float) location.getAltitude());
+        altitudedistanceEntryList.add(alte);
+
+
+        //speeddistanceEntryList.add(e);
+        refresh();
+        if (location.getProvider().equals(LocationManager.GPS_PROVIDER))
+        {
+            //LocalService.addlog("Provider=GPS");
+            lastgpslocationtime = System.currentTimeMillis();
+            if (gpx && fileheaderok)
+            {
+                if (bearing_gpx > 0)
+                {
+                    //if(log)Log.d(this.getClass().getName(), "Пишем трек с курсом");
+                    double lon1 = location.getLongitude();
+                    double lon2 = prevlocation_gpx.getLongitude();
+                    double lat1 = location.getLatitude();
+                    double lat2 = prevlocation_gpx.getLatitude();
+                    double dLon = lon2 - lon1;
+                    double y = Math.sin(dLon) * Math.cos(lat2);
+                    double x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+                    brng_gpx = Math.toDegrees(Math.atan2(y, x)); //.toDeg();
+                    position = position + "\n" + getString(R.string.TrackCourseChange) + OsMoDroid.df1.format(abs(brng_gpx - prevbrng_gpx));
+                    refresh();
+                    if (OsMoDroid.settings.getBoolean("modeAND_gpx", false) && (int) location.getAccuracy() < hdop_gpx && location.getSpeed() >= speed_gpx / 3.6 && (location.distanceTo(prevlocation_gpx) > distance_gpx && location.getTime() > (prevlocation_gpx.getTime() + period_gpx) && (location.getSpeed() >= speedbearing_gpx / 3.6 && abs(brng_gpx - prevbrng_gpx) >= bearing_gpx)))
+                    {
+                        prevlocation_gpx.set(location);
+                        prevbrng_gpx = brng_gpx;
+                        writegpx(location);
+                    }
+                    if (!OsMoDroid.settings.getBoolean("modeAND_gpx", false) && (int) location.getAccuracy() < hdop_gpx && location.getSpeed() >= speed_gpx / 3.6 && (location.distanceTo(prevlocation_gpx) > distance_gpx || location.getTime() > (prevlocation_gpx.getTime() + period_gpx) || (location.getSpeed() >= speedbearing_gpx / 3.6 && abs(brng_gpx - prevbrng_gpx) >= bearing_gpx)))
+                    {
+                        prevlocation_gpx.set(location);
+                        prevbrng_gpx = brng_gpx;
+                        writegpx(location);
+                    }
+                }
+                else
+                {
+                    //if(log)Log.d(this.getClass().getName(), "Пишем трек без курса");
+                    if (OsMoDroid.settings.getBoolean("modeAND_gpx", false) && location.getSpeed() >= speed_gpx / 3.6 && (int) location.getAccuracy() < hdop_gpx && (location.distanceTo(prevlocation_gpx) > distance_gpx && location.getTime() > (prevlocation_gpx.getTime() + period_gpx)))
+                    {
+                        writegpx(location);
+                        prevlocation_gpx.set(location);
+                    }
+                    if (!OsMoDroid.settings.getBoolean("modeAND_gpx", false) && location.getSpeed() >= speed_gpx / 3.6 && (int) location.getAccuracy() < hdop_gpx && (location.distanceTo(prevlocation_gpx) > distance_gpx || location.getTime() > (prevlocation_gpx.getTime() + period_gpx)))
+                    {
+                        writegpx(location);
+                        prevlocation_gpx.set(location);
+                    }
+                }
+            }
+            Log.d(this.getClass().getName(), "sessionstarted=" + sessionstarted);
+            //LocalService.addlog("Session started="+sessionstarted);
+            if (live)
+            {
+                //LocalService.addlog("live and session satrted");
+                if (bearing > 0)
+                {
+                    //LocalService.addlog("bearing>0");
+                    //if(log)Log.d(this.getClass().getName(), "Попали в проверку курса для отправки");
+                    //if(log)Log.d(this.getClass().getName(), "Accuracey"+location.getAccuracy()+"hdop"+hdop);
+                    double lon1 = location.getLongitude();
+                    double lon2 = prevlocation.getLongitude();
+                    double lat1 = location.getLatitude();
+                    double lat2 = prevlocation.getLatitude();
+                    double dLon = lon2 - lon1;
+                    double y = Math.sin(dLon) * Math.cos(lat2);
+                    double x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+                    brng = Math.toDegrees(Math.atan2(y, x)); //.toDeg();
+                    position = position + "\n" + getString(R.string.SendCourseChange) + OsMoDroid.df1.format(abs(brng - prevbrng));
+                    refresh();
+                    if (OsMoDroid.settings.getBoolean("modeAND", false) && (int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance && location.getTime() > (prevlocation.getTime() + period) && (location.getSpeed() >= (speedbearing / 3.6) && abs(brng - prevbrng) >= bearing)))
+                    {
+                        //LocalService.addlog("modeAND and accuracy and speed");
+                        prevlocation.set(location);
+                        prevbrng = brng;
+                        //if(log)Log.d(this.getClass().getName(), "send(location)="+location);
+                        sendlocation(location,true);
+                    }
+                    else
+                    {
+                        //LocalService.addlog("modeAND and accuracy and speed -ELSE");
+                    }
+                    if (!OsMoDroid.settings.getBoolean("modeAND", false) && (int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance || location.getTime() > (prevlocation.getTime() + period) || (location.getSpeed() >= (speedbearing / 3.6) && abs(brng - prevbrng) >= bearing)))
+                    {
+                        //LocalService.addlog("not modeAND and accuracy and speed");
+                        prevlocation.set(location);
+                        prevbrng = brng;
+                        //if(log)Log.d(this.getClass().getName(), "send(location)="+location);
+                        sendlocation(location,true);
+                    }
+                    else
+                    {
+                        //LocalService.addlog("not modeAND and accuracy and speed - ELSE");
+                    }
+                }
+                else
+                {
+                    //LocalService.addlog("bearing>0 - ELSE");
+                    //if(log)Log.d(this.getClass().getName(), "Отправляем без курса");
+                    if (OsMoDroid.settings.getBoolean("modeAND", false) && (int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance && location.getTime() > (prevlocation.getTime() + period)))
+                    {
+                        //LocalService.addlog("modeAND and accuracy and speed");
+                        //if(log)Log.d(this.getClass().getName(), "Accuracey"+location.getAccuracy()+"hdop"+hdop);
+                        prevlocation.set(location);
+                        //if(log)Log.d(this.getClass().getName(), "send(location)="+location);
+                        sendlocation(location,true);
+                    }
+                    else
+                    {
+                        //LocalService.addlog("modeAND and accuracy and speed - ELSE");
+                    }
+                    if (!OsMoDroid.settings.getBoolean("modeAND", false) && (int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance || location.getTime() > (prevlocation.getTime() + period)))
+                    {
+                        //LocalService.addlog("not modeAND and accuracy and speed");
+                        //if(log)Log.d(this.getClass().getName(), "Accuracey"+location.getAccuracy()+"hdop"+hdop);
+                        prevlocation.set(location);
+                        //if(log)Log.d(this.getClass().getName(), "send(location)="+location);
+                        sendlocation(location,true);
+                    }
+                    else
+                    {
+                        //LocalService.addlog("modeAND and accuracy and speed - ELSE");
+                    }
+                }
+            }
+            else
+            {
+                Log.d(this.getClass().getName(), " not !hash.equals() && live&&sessionstarted");
+                //LocalService.addlog("live and session satrted - ELSE");
+            }
+        }
+        else
+        {
+            //LocalService.addlog("Provider=GPS - ELSE");
+        }
+    }
+    public void onStatusChanged(String provider, int status, Bundle extras)
+    {
+            Log.d(this.getClass().getName(), "Изменился статус провайдера:" + provider + " статус:" + status + " Бандл:" + extras.getInt("satellites"));
+    }
+
+    private void sendlocation(Location location, boolean gps)
+    {
+//http://t.esya.ru/?60.452323:30.153262:5:53:25:hadfDgF:352
+//	- 0 = latitudedecimal(9,6) (широта)
+//	- 1 = longitudedecimal(9,6) (долгота)
+//	- 2 = HDOPfloat (горизонтальная ошибка: метры)
+//	- 3 = altitudefloat (высота на уровнем моря: метры)
+//	- 4 = speedfloat(1) (скорость: метры в секунду)
+//	- 5 = hashstring (уникальный хеш пользователя)
+//	- 6 = checknumint(3) (контрольное число к хешу)
+        //T|L53.1:30.3S2A4H2B23
+        if (authed && sending.equals("")&&sessionstarted)
+        {
+            sending=locationtoSending(location);
+            if(!gps)
+            {
+                sending=sending+"M";
+            }
+            sendToServer(sending, false);
+        }
+        else
+        {
+            Log.d(this.getClass().getName(), "Отправка не пошла: " + authed + " s " + sending);
+            if (usebuffer)
+            {
+                buffer.add("T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
+                        + "S" + df1.format(location.getSpeed())
+                        + "A" + df0.format(location.getAltitude())
+                        + "H" + df0.format(location.getAccuracy())
+                        + "C" + df0.format(location.getBearing())
+                        + "T" + location.getTime() / 1000
+                );
+                buffercounter++;
+            }
+        }
+        if (myIM != null && !authed && OsMoDroid.settings.getBoolean("sendsms",false))
+        {
+            if(SystemClock.uptimeMillis()>lastsmstime+1000*Integer.parseInt(OsMoDroid.settings.getString("smsperiod","300")))
+            {
+                lastsmstime=SystemClock.uptimeMillis();
+                try
+                {
+                    String messageText = "L" + df6.format(location.getLatitude()) + ":" + OsMoDroid.df6.format(location.getLongitude())
+                            + "S" + df0.format(location.getSpeed())
+                            + "A" + df0.format(location.getAltitude())
+                            + "H" + df0.format(location.getAccuracy())
+                            + "C" + df0.format(location.getBearing());
+                    short port = 901;
+
+
+                    SmsManager smsManager = SmsManager.getDefault();
+                    smsManager.sendDataMessage(OsMoDroid.settings.getString("sendsmsnumber",""), null, port, messageText.getBytes(), null, null);
+
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    //writeException(e);
+
+                }
+            }
+            else
+            {
+                //addlog("Еще рано!");
+            }
+        }
+        else
+        {
+            addlog(Boolean.toString(myIM==null)+Boolean.toString(!authed)+Boolean.toString(OsMoDroid.settings.getBoolean("sendsms",false)));
+        }
+    }
+
+    public void sendToServer(String str, boolean gui) {
+        Message msg = new Message();
+        Bundle b = new Bundle();
+        b.putString("write", str);
+        b.putBoolean("pp", str.equals("PP"));
+        msg.setData(b);
+        if (running) {
+            if (iMWriter.handler != null) {
+                String[] data = str.split("\\===");
+                ArrayList<String> cl = new ArrayList<String>();
+                for (int index = 0; index < data.length; index++) {
+                    if (data[index].contains("|")) {
+                        data[index] = data[index].substring(0, data[index].indexOf('|'));
+                    }
+                    if (!data[index].equals("PP")) {
+                        cl.add(data[index]);
+                    }
+                }
+                executedCommandArryaList.addAll(cl);
+                iMWriter.handler.sendMessage(msg);
+                refresh();
+            } else {
+                LocalService.addlog("panic! handler is null");
+                Log.d(this.getClass().getName(), " handler is null!!!");
+            }
+        } else {
+            if (gui) {
+                Toast.makeText(this, localService.getString(R.string.offline_on), Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void writegpx(Location location)
+    {
+        FileWriter trackwr;
+        long gpstime = location.getTime();
+        Date date = new Date(gpstime);
+        // SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-mm-dd'T'HH:mm:ssZ");
+        String strgpstime = sdf1.format(date) + "Z";
+        writecounter++;
+        if ((gpxbuffer).length() < 5000)
+        {
+            gpxbuffer = gpxbuffer + "<trkpt lat=\"" + df6.format(location.getLatitude()) + "\""
+                    + " lon=\"" + df6.format(location.getLongitude())
+                    + "\"><ele>" + df0.format(location.getAltitude())
+                    + "</ele><time>" + strgpstime
+                    + "</time><speed>" + df0.format(location.getSpeed())
+                    + "</speed>" + "<hdop>" + df0.format(location.getAccuracy() / 4) + "</hdop>" + "</trkpt>";
+        }
+        else
+        {
+            try
+            {
+                trackwr = new FileWriter(fileName, true);
+                String towright = gpxbuffer;
+                trackwr.write(towright);//.replace(",", "."));
+                trackwr.flush();
+                trackwr.close();
+                gpxbuffer = "";
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+    }
+    public synchronized void refresh()
+    {
+        if (state && connOpened && !connecting)
+        {
+            int icon = R.drawable.eyeo;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            {
+                icon=R.drawable.eyeo26;
+            }
+            updateNotification(icon);
+        }
+        else if (state && connecting)
+        {
+            int icon = R.drawable.eyeu;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            {
+                icon=R.drawable.eyeu26;
+            }
+            updateNotification(icon);
+
+        }
+        else if (state)
+        {
+            int icon = R.drawable.eyen;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            {
+                icon=R.drawable.eyen26;
+            }
+            updateNotification(icon);
+        }
+        in.removeExtra("startmessage");
+        in.putExtra("position", position + "\n" + satellite + " " + getString(R.string.accuracy) + accuracy);
+        in.putExtra("sattelite", satellite + " " + getString(R.string.accuracy) + accuracy);
+        in.putExtra("sendresult", sendresult);
+        in.putExtra("buffercounter", buffercounter);
+
+        in.putExtra("started", state);
+        in.putExtra("globalsend", globalsend);
+        in.putExtra("sos", sos);
+        in.putExtra("signalisationon", signalisationOn);
+        in.putExtra("sendcounter", sendcounter);
+        in.putExtra("writecounter", writecounter);
+        in.putExtra("currentspeed", df0.format(currentspeed * 3.6));
+        in.putExtra("avgspeed", df1.format(avgspeed * 3600));
+        in.putExtra("maxspeed", df1.format(maxspeed * 3.6));
+        in.putExtra("workdistance", df2.format(workdistance / 1000));
+        in.putExtra("timeperiod", formatInterval(timeperiod));
+        if(altitude!=Integer.MIN_VALUE)
+        {
+            in.putExtra("altitude", df0.format(altitude));
+        }
+        else
+        {
+            in.putExtra("altitude", "");
+        }
+
+        in.putExtra("totalclimb",df0.format(totalclimb));
+        if (myIM != null)
+        {
+            in.putExtra("connect", connOpened);
+            in.putExtra("connecting", connecting);
+            in.putExtra("executedlistsize", executedCommandArryaList.size());
+        }
+        in.putExtra("motd", motd);
+        in.putExtra("traffic", Long.toString((TrafficStats.getUidTxBytes(mReactContext.getApplicationInfo().uid)-startTraffic) / 1024) + dot.getDecimalSeparator() + Long.toString((TrafficStats.getUidTxBytes(context.getApplicationInfo().uid)-myIM.startTraffic) % 1000) + "KB " + myIM.connectcount + "|" + myIM.erorconenctcount);
+        in.putExtra("pro", pro);
+
+        sendBroadcast(in);
+        //updatewidgets();
+    }
+
+    void updateNotification(int icon)
+    {
+        if (foregroundnotificationBuilder != null)
+        {
+            foregroundnotificationBuilder.setContentText(getString(R.string.Sendcount) + sendcounter + ' ' + getString(R.string.writen) + writecounter);
+            if (icon != -1)
+            {
+                foregroundnotificationBuilder.setSmallIcon(icon);
+                foregroundnotificationBuilder.setColor(Color.parseColor("#FFA500"));
+            }
+            mNotificationManager.notify(OSMODROID_ID, foregroundnotificationBuilder.build());
+        }
+    }
+
+    public static float distanceBetween(final IGeoPoint that,final IGeoPoint other) {
+
+        final double a1 = DEG2RAD * that.getLatitude();
+        final double a2 = DEG2RAD * that.getLongitude();
+        final double b1 = DEG2RAD * other.getLatitude();
+        final double b2 = DEG2RAD * other.getLongitude();
+
+        final double cosa1 = Math.cos(a1);
+        final double cosb1 = Math.cos(b1);
+
+        final double t1 = cosa1 * Math.cos(a2) * cosb1 * Math.cos(b2);
+
+        final double t2 = cosa1 * Math.sin(a2) * cosb1 * Math.sin(b2);
+
+        final double t3 = Math.sin(a1) * Math.sin(b1);
+
+        final double tt = Math.acos(t1 + t2 + t3);
+        if(Float.isNaN((float)tt))
+        {
+            return 0f;
+        }
+        return  ((float)RADIUS_EARTH_METERS) * (float)tt;
+    }
+
+    static String formatInterval(final long l)
+    {
+        return String.format("%02d:%02d:%02d", l / (1000 * 60 * 60), (l % (1000 * 60 * 60)) / (1000 * 60), ((l % (1000 * 60 * 60)) % (1000 * 60)) / 1000);
+    }
+
+    private String locationtoSending(Location location) {
+        String sending="";
+        Log.d(this.getClass().getName(), "Отправка:" + authed + " s " + sending);
+        if ((location.getSpeed() * 3.6) >= 6)
+        {
+            sending =
+                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
+                            + "S" + df0.format(location.getSpeed())
+                            + "A" + df0.format(location.getAltitude())
+                            + "H" + df0.format(location.getAccuracy())
+                            + "C" + df0.format(location.getBearing());
+            if (usebuffer)
+            {
+                sending = sending + "T" + location.getTime() / 1000;
+            }
+        }
+        if ((location.getSpeed() * 3.6) < 6)
+        {
+            sending =
+                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
+                            + "S" + df0.format(location.getSpeed())
+                            + "A" + df0.format(location.getAltitude())
+                            + "H" + df0.format(location.getAccuracy());
+            if (usebuffer)
+            {
+                sending = sending + "T" + location.getTime() / 1000;
+            }
+        }
+        if ((location.getSpeed() * 3.6) <= 1)
+        {
+            sending =
+                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
+                            + "A" + df0.format(location.getAltitude())
+                            + "H" + df0.format(location.getAccuracy());
+            if (usebuffer)
+            {
+                sending = sending + "T" + location.getTime() / 1000;
+            }
+        }
+        return sending;
+    }
+
+
 }
