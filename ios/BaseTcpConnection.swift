@@ -14,8 +14,6 @@ open class BaseTcpConnection: NSObject {
     
     let tcpClient = TcpClient()
 
-
-    
     open func parseOutput(_ output: String){
         answerObservers.notify(output)
     }
@@ -67,27 +65,18 @@ open class BaseTcpConnection: NSObject {
     
     override init(){
         super.init()
-        
     }
     
     func connect(_ token: Token){
         tcpClient.callbackOnParse = parseOutput
         tcpClient.createConnection(token)
     }
-    
-   
-   
-    
+  
     //properties
     
     //var connected: Bool = false
     var sessionOpened: Bool = false
-
   
-    
-    
-    
-    
     open func closeConnection(){
         tcpClient.closeConnection()
     }
@@ -99,10 +88,6 @@ open class BaseTcpConnection: NSObject {
 
     
     //TODO: should be in sending manager!!!
-    
-    
-    
-    
     func closeSession(_ request: String){
         tcpClient.send(message: request)
     }

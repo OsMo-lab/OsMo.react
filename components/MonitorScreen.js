@@ -17,7 +17,7 @@ export default class MonitorScreen extends React.Component {
 
   TrackerPauseClick() {
     if (this.props.screenProps.appState.tracker.state == 'run'){
-      OsMoEventEmitter.startSendingCoordinates(false);
+      OsMoEventEmitter.pauseSendingCoordinates();
     } else {
       OsMoEventEmitter.stopSendingCoordinates();
     }
@@ -68,7 +68,7 @@ export default class MonitorScreen extends React.Component {
         </View>
         <View style={{flexDirection: 'row'}}>
           <Text style={{color:'lightgray',fontSize:20}}>TrackerID:</Text>
-          <Text style={{color:'lightgray',fontSize:20}}>{this.props.screenProps.appState.device}</Text>
+          <Text style={{color:'lightgray',fontSize:20}}>{this.props.screenProps.appState.trackerId}</Text>
         </View>
         <View style={{flexDirection: 'row', margin: 5 }}>
           <Ionicons name={this.getStateIconName()} size={140} color='#FB671E' backgroundColor="green" onPress={() => this.TrackerClick()}/>

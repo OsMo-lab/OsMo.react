@@ -13,7 +13,7 @@ var hasListeners : Bool = false;
 @objc (OsMoEventEmitter)
 class OsMoEventEmitter: RCTEventEmitter{
   let connectionManager =  ConnectionManager.sharedConnectionManager;
-  let sendingManger = SendingManager.sharedSendingManager
+  let sendingManger = SendingManager.sharedSendingManager;
   
   // we need to override this method and
   // return an array of event names that we can listen to
@@ -29,6 +29,11 @@ class OsMoEventEmitter: RCTEventEmitter{
     _ = connectionManager.onMessageReceived.add{
       if (hasListeners) {
         self.sendEvent(withName: "onMessageReceived", body: ["message": $0])
+      }
+    }
+    _ = connectionManager.onAuthReceived.add{
+      if (hasListeners) {
+        self.sendEvent(withName: "onMessageReceived", body: ["newkey": $0])
       }
     }
   }
@@ -48,6 +53,16 @@ class OsMoEventEmitter: RCTEventEmitter{
   override func stopObserving() {
     hasListeners = false
   }
+  @objc func configure(_ config: String){
+    if let data: Data = config.data(using: .utf8) {
+      do {
+        let json = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.mutableContainers);
+        connectionManager.settings = (json as? NSDictionary)!
+      } catch {
+      }
+    }
+  }
+  
   @objc func connect(){
     connectionManager.connect()
   }

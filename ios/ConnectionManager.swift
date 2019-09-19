@@ -13,16 +13,15 @@ import CoreLocation
 import AudioToolbox
 import AVFoundation
 
-let authUrl = URL(string: "https://api.osmo.mobi/new?")
-let servUrl = URL(string: "https://api.osmo.mobi/serv?") // to get server info
-let iOsmoAppKey = "Jdf43G_fVl3Opa42"
-let apiUrl = "https://api.osmo.mobi/iProx?"
-
 class ConnectionManager: NSObject{
+  
+  var settings : NSDictionary = [:] ;
   
   private let bgController = ConnectionHelper()
   //@objc let emitter = OsMoEventEmitter.sharedOsMoEventEmitte//r
   let onMessageReceived = ObserverSet<(String)>()
+  let onAuthReceived = ObserverSet<(String)>()
+  
   var monitoringGroupsHandler: ObserverSetEntry<[UserGroupCoordinate]>?
   
   var onGroupListUpdated: ObserverSetEntry<[Group]>?
@@ -55,7 +54,7 @@ class ConnectionManager: NSObject{
   let dataSendEnd = ObserverSet<()>()
   
   let conHelper = ConnectionHelper()
-  
+  private var hasListeners = false
   let monitoringGroupsUpdated = ObserverSet<[UserGroupCoordinate]>()
   
   fileprivate let log = LogQueue.sharedLogQueue
@@ -72,7 +71,7 @@ class ConnectionManager: NSObject{
   var delayedRequests : [String]  = [];
   
   var connection = BaseTcpConnection()
-  var coordinates: [LocationModel]
+  var coordinates: [LocationModel] = [LocationModel]()
   
   let reachability = Reachability()!
   
@@ -96,18 +95,8 @@ class ConnectionManager: NSObject{
 
   
   override init(){
-    coordinates = [LocationModel]()
-    
     super.init()
     
-    NotificationCenter.default.addObserver(self, selector: aSelector, name: NSNotification.Name.reachabilityChanged, object: self.reachability)
-    do  {
-      try self.reachability.startNotifier()
-    }catch{
-      print("could not start reachability notifier")
-    }
-    //!! subscribtion for almost all types events
-    connection.answerObservers.add(notifyAnswer)
     
     let audioSession = AVAudioSession.sharedInstance()
     
@@ -122,6 +111,20 @@ class ConnectionManager: NSObject{
     }
   }
   
+  func setListeners() {
+    if (hasListeners == false) {
+      NotificationCenter.default.addObserver(self, selector: aSelector, name: NSNotification.Name.reachabilityChanged, object: self.reachability)
+      do  {
+        try self.reachability.startNotifier()
+      }catch{
+        print("could not start reachability notifier")
+      }
+      //!! subscribtion for almost all types events
+      connection.answerObservers.add(notifyAnswer)
+      
+      hasListeners = true
+    }
+  }
   func getServerInfo(key:String?) {
     conHelper.onCompleted = {(dataURL, data) in
       var res : NSDictionary = [:]
@@ -165,13 +168,13 @@ class ConnectionManager: NSObject{
       }
     }
     log.enqueue("CM.getServerInfo")
-    let requestString = "app=\(iOsmoAppKey)"
-    conHelper.backgroundRequest(servUrl!, requestBody: requestString as NSString)
+    let requestString = "app=\(settings["OsmoAppKey"] as! String)"
+    conHelper.backgroundRequest(URL(string: settings["servUrl"] as! String)!, requestBody: requestString as NSString)
   }
   
   func Authenticate () {
-    let device = SettingsManager.getKey(SettingKeys.device)
-    if device == nil || device?.length == 0{
+    let device = settings["device"] as? String ?? ""
+    if (device == "") {
       log.enqueue("CM.Authenticate:getting key from server")
       
       conHelper.onCompleted = {(dataURL, data) in
@@ -183,25 +186,24 @@ class ConnectionManager: NSObject{
           
           if let newKey = res[Keys.device.rawValue] as? String {
             self.log.enqueue("CM.Authenticate: got key from server \(newKey)")
-            SettingsManager.setKey(newKey as NSString, forKey: SettingKeys.device)
+            self.onAuthReceived.notify((newKey))
+            self.settings.setValue(newKey, forKey: "device")
             self.Authenticated = true
             self.getServerInfo(key: newKey)
           } else {
             
           }
         } catch {
-          //log.enqueue("CM.Authenticate: error serializing key")
         }
       }
       let vendorKey = UIDevice.current.identifierForVendor!.uuidString
       let model = UIDevice.current.modelName
       let version = UIDevice.current.systemVersion
-      let requestString = "app=\(iOsmoAppKey)&id=\(vendorKey)&imei=0&platform=\(model) iOS \(version)"
-      conHelper.backgroundRequest(authUrl!, requestBody: requestString as NSString)
+      let requestString = "app=\(settings["OsmoAppKey"] as! String)&id=\(vendorKey)&imei=0&platform=\(model) iOS \(version)"
+      conHelper.backgroundRequest(URL(string: settings["authUrl"] as! String)!, requestBody: requestString as NSString)
     } else {
-      //LogQueue.sharedLogQueue.enqueue("CM.Authenticate:using local key \(device!)")
       self.Authenticated = true
-      self.getServerInfo(key: device! as String)
+      self.getServerInfo(key: device)
     }
   }
   
@@ -296,10 +298,8 @@ class ConnectionManager: NSObject{
       if self.connection.addCallBackOnConnect == nil {
         self.connection.addCallBackOnConnect = {
           () -> Void in
-          //self.connecting = false
-          let dk = SettingKeys.device
-          let device = SettingsManager.getKey(dk)! as String
           
+          let device = self.settings["device"] as! String
           let request = "\(Tags.auth.rawValue)\(device)"
           self.connection.send(request)
         }
@@ -336,6 +336,8 @@ class ConnectionManager: NSObject{
   }
   
   @objc func connect(){
+    setListeners()
+    
     log.enqueue("CM: connect")
     if self.connecting {
       log.enqueue("Conection already in process")
@@ -405,10 +407,10 @@ class ConnectionManager: NSObject{
       } else {
         log.enqueue("CM.send appInActive")
         self.connecting = false;
-        let device = SettingsManager.getKey(SettingKeys.device)! as String
+        let device = settings["device"] as! String;
         let escapedRequest = request.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed)
         
-        if let url = URL(string: (apiUrl + "k=" + device + "&m=" + escapedRequest! ) ) {
+        if let url = URL(string: ((settings["apiUrl"] as! String) + "k=" + device + "&m=" + escapedRequest! ) ) {
           conHelper.onCompleted = {(dataURL, data) in
             guard let data = data else { return }
             self.log.enqueue("CM.Send.onCompleted")
