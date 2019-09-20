@@ -17,7 +17,6 @@ export default class SettingsScreen extends React.Component {
   }
 
   ResetClick() {
-    console.log('ResetClick');
     return this.props.screenProps.onResetAuthorization();
   }
 }

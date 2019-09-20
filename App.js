@@ -52,6 +52,7 @@ export default class App extends React.Component {
             apiUrl:"https://api2.osmo.mobi/iProx?", // send requests in background mode for iOS
             OsmoAppKey:"Jdf43G_fVl3Opa42",
             device:"",
+            motd:"Welcome to OsMo",
         }
         super(props);
         this.state = {
@@ -67,7 +68,7 @@ export default class App extends React.Component {
             groups: [],
             trackerId: '',
             userNick: 'unknown',
-            motd: 'Welcome to OsMo',
+            motd: '',
             motdtime:0,
             permanent: 0,
         }
@@ -88,9 +89,10 @@ export default class App extends React.Component {
         res => {
             console.log(res);
             this.state.log.push({message:JSON.stringify(res)});
-            let output = res.message;
-            if (output) {
-                let command = output.split('|');
+            
+            //Сообщение от сервера
+            if (res.message) {
+                let command = res.message.split('|');
                 if (command.length == 2) {
                     if (command[0] == 'AUTH' ) {
                         let resp = JSON.parse(command[1]);
@@ -108,7 +110,10 @@ export default class App extends React.Component {
                         return;
                     }
                     if (command[0] == 'MD') {
-                        let st = Object.assign(this.state,{motd : command[1]});
+                        global.config.motd = command[1];
+                        let st = Object.assign(this.state,{motd : global.config.motd});
+                        this.storeData('motd', global.config.motd);
+                            
                         this.setState(st);
                         return;
                     }
@@ -126,16 +131,21 @@ export default class App extends React.Component {
                 }    
             }
 
+            //Сообщение о полученном новом device
             if (res.newkey) {
                 this.storeData('device', res.newkey);
                 global.config.device = res.newkey;
                 //OsMoEventEmitter.configure(JSON.stringify(global.config));
                 return;
             }
-        }
-        );  
-        
-        
+            //Ошибка при соединенеии
+            if (res.error) {
+                let resp = JSON.parse(res.error);
+                if (resp.error == 10 || resp.error == 100) {
+                    this.clearKeys();
+                }
+            }
+        });  
         
         AsyncStorage.getItem('trackerId', (err, result) => {
             this.setState({trackerId: result});
@@ -145,17 +155,18 @@ export default class App extends React.Component {
             this.setState({motdtime: result});
             console.log('motdtime from config:' + result);
         });
+        AsyncStorage.getItem('motd', (err, result) => {
+            global.config.motd = result;
+            this.setState({motd: result});
+        });
         AsyncStorage.getItem('device', (err, result) => {
             global.config.device = result;
-            console.log('device from config:' + result);
-            
+            console.log('device from config:' + result); 
             OsMoEventEmitter.configure(JSON.stringify(global.config));
             OsMoEventEmitter.connect()
         });
         ;
     }
-
-    
 
     componentWillUnmount() {
         this.eventEmitter.remove();
@@ -169,37 +180,8 @@ export default class App extends React.Component {
         return <AppContainer screenProps = {props}/>;
     }
 
-    async retrieveData () {
-        try {
-          var value = await AsyncStorage.getItem('device')
-          if (value !== null) {
-            global.device = value;
-          }
-        } catch (e) {
-            console.log('Failed to load device')
-        }
-        try {
-        
-          value = await AsyncStorage.getItem('trackerId')
-          if (value !== null) {
-            this.setState({trackerId: value});
-          }
-        } catch (e) {
-            console.log('Failed to load trackerId')
-        }
-        try{
-          value = await AsyncStorage.getItem('motdtime')
-          if (value !== null) {
-            this.setState({motdtime: Int(value)});
-          }
-        } catch (e) {
-            console.log('Failed to load modtime')
-        }
-
-        
-      }
-
-      async storeData (name,value){
+    
+    async storeData (name,value){
         try {
         await AsyncStorage.setItem(name, value)
         } catch (e) {

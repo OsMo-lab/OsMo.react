@@ -471,12 +471,13 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public void onResultsSucceeded(APIComResult result)
     {
         checkadressing = false;
+        WritableMap params;
 
         Log.d(getClass().getSimpleName(), "OnResultsSucceded cmd:" + result.Command + " res:"+ result.rawresponse);
 
         if (result.Command.equals("checkaddres") && !(result.Jo == null))
         {
-            WritableMap params = Arguments.createMap();
+            params = Arguments.createMap();
             params.putString("message",result.rawresponse);
             this.sendEvent(this.mReactContext,"onMessageReceived",params);
 
@@ -507,25 +508,11 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 {
                     e.printStackTrace();
                 }
-                if(result.Jo.has("uid"))
-                {
-
-                    //senEvent
-                }
-            }
-            else
-            {
-                if (result.Jo.optInt("error") == 10 || result.Jo.optInt("error") == 100 || result.Jo.optString("token").equals("false"))
-                {
-                    //sendEVent
-                }
-                else if (result.Jo.optInt("error") == 67 || result.Jo.optInt("error") == 68 || result.Jo.optInt("error") == 69)
-                {
-                 //SendEvent
-                }
-                else if (result.Jo.optInt("error") == 21 )
-                {
-                    //sendEvent
+            } else {
+                if (result.Jo.optInt("error") > 0) {
+                    params = Arguments.createMap();
+                    params.putString("error",result.rawresponse);
+                    this.sendEvent(this.mReactContext,"onMessageReceived",params);
                 }
             }
         } else if (result.Command.equals("sendid") && !(result.Jo == null)) {
@@ -535,7 +522,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             } catch(JSONException e){
 
             }
-            WritableMap params = Arguments.createMap();
+            params = Arguments.createMap();
             params.putString("newkey",device);
             this.sendEvent(this.mReactContext,"onMessageReceived",params);
 
