@@ -122,6 +122,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public PrintWriter wr;
     static long sendBytes = 0;
     static long recievedBytes = 0;
+    static Boolean log = false;
 
     long connectcount = 0;
     long erorconenctcount = 0;
@@ -286,6 +287,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 String value = current.optString(key);
                 settings.put(key, value);
             }
+            if (settings.optBoolean("log")) {
+                log = true;
+            }
 
         }
          catch (JSONException e) {
@@ -308,24 +312,28 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         readerThread = new Thread(iMReader, "reader");
         writerThread = new Thread(iMWriter, "writer");
         writerThread.start();
-        readerThread.start();
+
         connectThread.setPriority(Thread.MIN_PRIORITY);
         readerThread.setPriority(Thread.MIN_PRIORITY);
         writerThread.setPriority(Thread.MIN_PRIORITY);
-        //connectThread.start();
-
 
         if (device.isEmpty()) {
             sendid();
         } else {
-            getServerInfo(device);
-        }
+            if (workserverint == -1) {
+                getServerInfo(device);
+            } else {
+                connectThread.start();
+            }
 
+        }
         return;
     }
 
     @ReactMethod
     public void getMessageOfTheDay() {
+        sendToServer("MD", false);
+
         return;
     }
 
@@ -348,13 +356,15 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     private void getServerInfo(String device) {
 
-        APIcomParams params = null;
+        if (!checkadressing) {
+            checkadressing = true;
 
-        params = new APIcomParams(settings.optString("servUrl") + "app=" + settings.optString("OsmoAppKey") + "&id=" + device, "", "checkaddres");
+            APIcomParams params = null;
+            params = new APIcomParams(settings.optString("servUrl") + "app=" + settings.optString("OsmoAppKey") + "&id=" + device, "", "checkaddres");
 
-        sendidtask = new Netutil.MyAsyncTask(this);
-        sendidtask.execute(params);
-
+            sendidtask = new Netutil.MyAsyncTask(this);
+            sendidtask.execute(params);
+        }
     }
 
     private String capitalize(String s)
@@ -389,12 +399,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     @SuppressLint("MissingPermission")
     public void sendid()
     {
-
         String version = android.os.Build.VERSION.RELEASE;
         String androidID =  getString(getReactApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID);
-
-
-    //Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         TelephonyManager mngr = (TelephonyManager) getReactApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
         String IMEI = null;
         try
@@ -426,7 +432,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         sendidtask.execute(params);
 
         Log.d(getClass().getSimpleName(), "sendidtask start to execute");
-
     }
 
     public static int uploadnotifyid()
@@ -524,15 +529,16 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 }
             }
         } else if (result.Command.equals("sendid") && !(result.Jo == null)) {
-            WritableMap params = Arguments.createMap();
             String device = result.Jo.optString("device");
-            params.putString("newkey",device);
             try {
                 settings.put("device", device);
             } catch(JSONException e){
 
             }
+            WritableMap params = Arguments.createMap();
+            params.putString("newkey",device);
             this.sendEvent(this.mReactContext,"onMessageReceived",params);
+
             this.getServerInfo(device);
         }
         else
@@ -540,11 +546,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             socketRetryInt++;
             Log.d(getClass().getSimpleName(), "herrrr");
             setReconnectOnError();
-
-            WritableMap params = Arguments.createMap();
-            params.putString("message","MD|Error !");
-            this.sendEvent(this.mReactContext,"onMessageReceived",params);
-        }
+      }
     }
 
 
@@ -1725,11 +1727,42 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     private class IMReader implements Runnable
     {
+        //public Handler handler;
         private StringBuilder stringBuilder = new StringBuilder(1024);
         private String str;
         @Override
         public void run()
         {
+            /*
+            Looper.prepare();
+            handler = new Handler()
+            {
+                @Override
+                public void handleMessage(Message msg) {
+                    if (log) {
+                        Log.d(this.getClass().getName(), "Handle message " + msg.toString());
+                    }
+                    Bundle b = msg.getData();
+                    if (b.containsKey("read")) {
+                        String str = "";
+                        str = b.getString("read");
+                        if (str.substring(str.length() - 1, str.length()).equals("\n")) {
+                            str = str.substring(0, str.length() - 1);
+
+                        } else {
+
+                        }
+
+
+                        return;
+                    }
+
+                    super.handleMessage(msg);
+
+                }
+            };
+            */
+
             while (connOpened && !Thread.currentThread().isInterrupted())
             {
                 try
@@ -1766,14 +1799,19 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                         Bundle b = new Bundle();
                         b.putString("read", str);
                         msg.setData(b);
+
+                        WritableMap params = Arguments.createMap();
+                        params.putString("message", str);
+                        sendEvent(mReactContext, "onMessageReceived", params);
+
+
                         /*
-                        if (alertHandler != null)
+                        if (handler != null)
                         {
-                            localService.alertHandler.sendMessage(msg);
+                            handler.sendMessage(msg);
                         }
                         else
                         {
-                            LocalService.addlog("panic!alert handler is null ");
                             if (log)
                             {
                                 Log.d(this.getClass().getName(), " alert handler is null!!!");
@@ -1796,6 +1834,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             }
         }
     }
+
 
     private class IMConnect implements Runnable
     {
@@ -1874,8 +1913,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 });
                 */
 
-                //readerThread.start();
-                //writerThread.start();
+                readerThread.start();
                 sendToServer("AUTH|" + settings.optString("device"), false);
                 warnedsocketconnecterror=false;
             }
@@ -1893,14 +1931,10 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     workserverint=-1;
                 }
 
-                try {
-                if (socketRetryInt > 3 && !settings.getBoolean("understand"/*, false*/)&&!warnedsocketconnecterror)
+                if (socketRetryInt > 3 && !settings.optBoolean("understand"/*, false*/)&&!warnedsocketconnecterror)
                 {
                     warnedsocketconnecterror=true;
                     //localService.notifywarnactivity(localService.getString(R.string.checkfirewall), false, OsMoDroid.NOTIFY_NO_CONNECT);
-                }
-                } catch (JSONException e) {
-
                 }
             }
         }

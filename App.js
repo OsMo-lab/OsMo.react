@@ -86,6 +86,7 @@ export default class App extends React.Component {
        
         onMessageReceived = this.eventEmitter.addListener("onMessageReceived",
         res => {
+            console.log(res);
             this.state.log.push({message:JSON.stringify(res)});
             let output = res.message;
             if (output) {
@@ -93,26 +94,14 @@ export default class App extends React.Component {
                 if (command.length == 2) {
                     if (command[0] == 'AUTH' ) {
                         let resp = JSON.parse(command[1]);
-                        storeData = async () => {
-                            try {
-                            await AsyncStorage.setItem('trackerId', resp.id)
-                            } catch (e) {
-                            // saving error
-                            }
-                        }
+                        this.storeData('trackerId', resp.id);
                         this.setState({trackerId: resp.id});
                         if (resp.uid > 0) {
                             this.setState({userNick : resp.name});
                         }
                         this.setState({permanent : resp.permanent});
                         if (this.state.motdtime < resp.motd) {
-                            storeData = async () => {
-                                try {
-                                await AsyncStorage.setItem('motdtime', resp.motd)
-                                } catch (e) {
-                                // saving error
-                                }
-                            }
+                            this.storeData('motdtime', String(resp.motd));
                             this.setState({motdtime : resp.motd});
                             OsMoEventEmitter.getMessageOfTheDay();
                         }    
@@ -136,54 +125,34 @@ export default class App extends React.Component {
                     }
                 }    
             }
+
             if (res.newkey) {
-                toreData = async () => {
-                    try {
-                    await AsyncStorage.setItem('device', res.newkey)
-                    } catch (e) {
-                    // saving error
-                    }
-                }
-                global.device = res.newkey;
+                this.storeData('device', res.newkey);
+                global.config.device = res.newkey;
                 //OsMoEventEmitter.configure(JSON.stringify(global.config));
                 return;
             }
         }
         );  
         
-        getData = async () => {
-            try {
-              const value = await AsyncStorage.getItem('device')
-              if(value !== null) {
-                global.device = value;
-              }
-            } catch(e) {
-              // error reading value
-            }
-        }
-        getData = async () => {
-            try {
-              const value = await AsyncStorage.getItem('trackerId')
-              if(value !== null) {
-                this.setState({trackerId: value});
-                global.device = value;
-              }
-            } catch(e) {
-              // error reading value
-            }
-        }
-        getData = async () => {
-            try {
-              const value = await AsyncStorage.getItem('motdtime')
-              if(value !== null) {
-                this.setState({motdtime: value});
-              }
-            } catch(e) {
-              // error reading value
-            }
-        }
-        OsMoEventEmitter.configure(JSON.stringify(global.config));
-        OsMoEventEmitter.connect();
+        
+        
+        AsyncStorage.getItem('trackerId', (err, result) => {
+            this.setState({trackerId: result});
+            console.log('trackerId from config:' + result);
+        });
+        AsyncStorage.getItem('motdtime', (err, result) => {
+            this.setState({motdtime: result});
+            console.log('motdtime from config:' + result);
+        });
+        AsyncStorage.getItem('device', (err, result) => {
+            global.config.device = result;
+            console.log('device from config:' + result);
+            
+            OsMoEventEmitter.configure(JSON.stringify(global.config));
+            OsMoEventEmitter.connect()
+        });
+        ;
     }
 
     
@@ -200,7 +169,44 @@ export default class App extends React.Component {
         return <AppContainer screenProps = {props}/>;
     }
 
-    
+    async retrieveData () {
+        try {
+          var value = await AsyncStorage.getItem('device')
+          if (value !== null) {
+            global.device = value;
+          }
+        } catch (e) {
+            console.log('Failed to load device')
+        }
+        try {
+        
+          value = await AsyncStorage.getItem('trackerId')
+          if (value !== null) {
+            this.setState({trackerId: value});
+          }
+        } catch (e) {
+            console.log('Failed to load trackerId')
+        }
+        try{
+          value = await AsyncStorage.getItem('motdtime')
+          if (value !== null) {
+            this.setState({motdtime: Int(value)});
+          }
+        } catch (e) {
+            console.log('Failed to load modtime')
+        }
+
+        
+      }
+
+      async storeData (name,value){
+        try {
+        await AsyncStorage.setItem(name, value)
+        } catch (e) {
+        // saving error
+        }
+    }
+
     clearKeys() {
         const {OsMoEventEmitter} = NativeModules;
         console.log('clearKeys');    
