@@ -1,8 +1,7 @@
 package com.osmo;
 import java.io.File;
 
-import android.app.Notification;
-import android.support.v4.app.NotificationCompat.Builder;
+import android.app.Notification.Builder;
 public class APIcomParams
     {
         String action;

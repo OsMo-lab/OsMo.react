@@ -64,10 +64,8 @@ export default class SignInScreen extends React.Component {
     );
   }
 
-
   RegisterClick() {
     this.setState({newUser: !this.state.newUser});
-    console.log(this.state);
   }
 
   CancelClick() {

@@ -25,8 +25,7 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationCompat;
+import android.app.Notification.Builder;
 import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -72,6 +71,7 @@ import java.util.HashMap;
 import java.util.TimeZone;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
@@ -244,7 +244,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public static ArrayList<Entry> altitudedistanceEntryList = new ArrayList<Entry>();
     public static ArrayList<String> distanceStringList = new ArrayList<String>();
 
-    NotificationCompat.Builder foregroundnotificationBuilder;
+    Builder foregroundnotificationBuilder;
     boolean pro;
 
 
@@ -929,7 +929,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public void upload(File file)
     {
         PendingIntent contentIntent = PendingIntent.getActivity(this.mReactContext, 0, new Intent(), 0);
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(
+        Builder notificationBuilder = new Builder(
                 mReactContext.getApplicationContext(),"default")
                 .setWhen(System.currentTimeMillis())
                 .setContentText(file.getName())
