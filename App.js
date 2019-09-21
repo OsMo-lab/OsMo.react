@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Text, View, NativeModules,NativeEventEmitter } from 'react-native';
-import { createBottomTabNavigator, createAppContainer } from 'react-navigation';
+import { createBottomTabNavigator, createAppContainer, createStackNavigator } from 'react-navigation';
 import AsyncStorage from '@react-native-community/async-storage';
 import AccountScreen from './components/AccountScreen';
 import HistoryScreen from './components/HistoryScreen';
@@ -9,6 +9,7 @@ import MonitorScreen from './components/MonitorScreen';
 import SettingsScreen from './components/SettingsScreen';
 import MapScreen from './components/MapScreen';
 import LogScreen from './components/LogScreen';
+import SignInScreen from './components/SignIn';
 
 class IconWithBadge extends React.Component {
     render() {
@@ -45,7 +46,6 @@ class IconWithBadge extends React.Component {
 
 export default class App extends React.Component {
     constructor(props) {
-
         global.config = {
             authUrl: "https://api2.osmo.mobi/new?", // register new device
             servUrl:"https://api2.osmo.mobi/serv?", // to get server info
@@ -231,9 +231,36 @@ export default class App extends React.Component {
     }
 }
 
+const SinInStack = createStackNavigator(
+    {
+        Account: {
+            screen: AccountScreen,
+            navigationOptions: () => ({
+                title: 'A',
+                headerBackTitle: null,
+                }),
+        },
+        SignIn: {
+            screen: SignInScreen,
+            navigationOptions: () => ({
+                title: 'B',
+                headerBackTitle: null,
+                }),
+        }
+    },{
+        headerMode: 'none',
+        mode: 'modal',
+        defaultNavigationOptions: {
+          gesturesEnabled: false,
+        },
+    }
+    
+);
+
 const AppNavigator = createBottomTabNavigator({
     Monitor: { screen: MonitorScreen },
-    Account: { screen: AccountScreen },
+    //Account: { screen: AccountScreen },
+    Account: { screen: SignInScreen },
     Map: { screen: MapScreen },
     History: { screen: HistoryScreen },
     Settings: { screen: SettingsScreen },
