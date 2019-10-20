@@ -3,9 +3,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.osmdroid.api.IGeoPoint;
-import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.overlay.PathOverlay;
+//import org.osmdroid.api.IGeoPoint;
+//import org.osmdroid.util.GeoPoint;
+//import org.osmdroid.views.overlay.PathOverlay;
 
 import android.graphics.Color;
 import android.graphics.Paint;

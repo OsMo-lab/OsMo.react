@@ -274,7 +274,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     @ReactMethod
     public void configure(String config) {
-        Log.d(this.getClass().getSimpleName(), config);
+        //Log.d(this.getClass().getSimpleName(), config);
 
         try {
             JSONObject current  = new JSONObject(config);
@@ -317,7 +317,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         readerThread.setPriority(Thread.MIN_PRIORITY);
         writerThread.setPriority(Thread.MIN_PRIORITY);
 
-        if (device.isEmpty()) {
+        if (device == null || device == "null") {
             sendid();
         } else {
             if (workserverint == -1) {
@@ -345,7 +345,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     @ReactMethod
     public void stopSendingCoordinates() {
-
         return;
     }
 

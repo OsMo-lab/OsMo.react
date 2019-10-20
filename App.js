@@ -50,7 +50,7 @@ export default class App extends React.Component {
             authUrl: "https://api2.osmo.mobi/new?", // register new device
             servUrl:"https://api2.osmo.mobi/serv?", // to get server info
             apiUrl:"https://api2.osmo.mobi/iProx?", // send requests in background mode for iOS
-            OsmoAppKey:"Jdf43G_fVl3Opa42",
+            OsmoAppKey:Platform.OS === 'ios' ? "j4C32_f2bvK" : "dSA3dS-cF2Cj45",
             device:"",
             motd:"Welcome to OsMo",
         }
@@ -161,11 +161,10 @@ export default class App extends React.Component {
         });
         AsyncStorage.getItem('device', (err, result) => {
             global.config.device = result;
-            console.log('device from config:' + result); 
             OsMoEventEmitter.configure(JSON.stringify(global.config));
             OsMoEventEmitter.connect()
         });
-        ;
+        
     }
 
     componentWillUnmount() {
@@ -183,7 +182,7 @@ export default class App extends React.Component {
     
     async storeData (name,value){
         try {
-        await AsyncStorage.setItem(name, value)
+            await AsyncStorage.setItem(name, value)
         } catch (e) {
         // saving error
         }
@@ -224,13 +223,12 @@ export default class App extends React.Component {
     }
     
     onResetAuthorization() {
-        console.log(this.state);
         if (this.state.tracker.state == 'stop'){
             this.clearKeys();
         }
     }
 }
-
+/*
 const SinInStack = createStackNavigator(
     {
         Account: {
@@ -256,11 +254,11 @@ const SinInStack = createStackNavigator(
     }
     
 );
-
+*/
 const AppNavigator = createBottomTabNavigator({
     Monitor: { screen: MonitorScreen },
-    //Account: { screen: AccountScreen },
-    Account: { screen: SignInScreen },
+    Account: { screen: AccountScreen },
+    //Account: { screen: SignInScreen },
     Map: { screen: MapScreen },
     History: { screen: HistoryScreen },
     Settings: { screen: SettingsScreen },

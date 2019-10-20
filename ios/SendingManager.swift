@@ -97,7 +97,9 @@ class SendingManager: NSObject{
         self.lcSendTimer?.invalidate()
         self.lcSendTimer = nil
         sessionPaused.notify((0))
-        UIApplication.shared.isIdleTimerDisabled = false
+        DispatchQueue.main.sync {
+          UIApplication.shared.isIdleTimerDisabled = false
+        }
         connectionManager.pauseSession()
         
     }
@@ -150,9 +152,7 @@ class SendingManager: NSObject{
             if connectionManager.sessionOpened {
                 sessionStarted.notify((0))
             }
-            
             UIApplication.shared.isIdleTimerDisabled = SettingsManager.getKey(SettingKeys.isStayAwake)!.boolValue
-            
         }
     }
      
