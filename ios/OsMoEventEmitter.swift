@@ -36,6 +36,11 @@ class OsMoEventEmitter: RCTEventEmitter{
         self.sendEvent(withName: "onMessageReceived", body: ["newkey": $0])
       }
     }
+    _ = connectionManager.onServerInfoReceived.add{
+      if (hasListeners) {
+        self.sendEvent(withName: "onMessageReceived", body: ["server": $0])
+      }
+    }
   }
   
   override func supportedEvents() -> [String]! {

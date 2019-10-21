@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { Text, View, FlatList,Platform, StatusBar} from 'react-native';
+import {SafeAreaView} from 'react-navigation';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import FlatListItemSeparator from './FlatListSeparator';
 
 export default class AccountScreen extends React.Component {
   render() {
     return (
+      <SafeAreaView style={{ backgroundColor: 'black', flex: 1 }}>
       <View style={{paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight, flex: 1, backgroundColor: 'black' }}>
         <Text  style={{color:'#FB671E',fontSize:20}}>Account</Text> 
         <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
@@ -27,6 +29,7 @@ export default class AccountScreen extends React.Component {
         renderItem={({item}) => <Text style={{height:100,color:'white'}}>{item.name}</Text>}
       />
       </View>
+      </SafeAreaView>
     );
   }
 }

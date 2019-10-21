@@ -21,6 +21,7 @@ class ConnectionManager: NSObject{
   //@objc let emitter = OsMoEventEmitter.sharedOsMoEventEmitte//r
   let onMessageReceived = ObserverSet<(String)>()
   let onAuthReceived = ObserverSet<(String)>()
+  let onServerInfoReceived = ObserverSet<(String)>()
   
   var monitoringGroupsHandler: ObserverSetEntry<[UserGroupCoordinate]>?
   
@@ -138,7 +139,9 @@ class ConnectionManager: NSObject{
       }
       if let output = String(data:data, encoding:.utf8) {
         self.log.enqueue("server: \(output)")
+        self.onServerInfoReceived.notify((output))
       }
+      
       do {
         let jsonDict = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.mutableContainers);
         res = (jsonDict as? NSDictionary)!
@@ -642,7 +645,6 @@ class ConnectionManager: NSObject{
     }
     var answer : Int = 0;
     var name: String;
-    //self.emitter.sendEvent(withName: "onMessageReceived", body: ["message": output])
     onMessageReceived.notify((output))
     if command == AnswTags.auth.rawValue {
       //ex: INIT|{"id":"CVH2SWG21GW","group":1,"motd":1429351583,"protocol":2,"v":0.88} || INIT|{"id":1,"error":"Token is invalid"}

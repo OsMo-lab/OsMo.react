@@ -57,6 +57,7 @@ export default class App extends React.Component {
         super(props);
         this.state = {
             isLoading: true,
+            address:'',
             tracker: {
                 distance: 0,
                 speed: 0,
@@ -89,7 +90,13 @@ export default class App extends React.Component {
         res => {
             console.log(res);
             this.state.log.push({message:JSON.stringify(res)});
-            
+            //Получены TCP координаты сервера 
+            if (res.server) {
+                let resp = JSON.parse(res.server);
+                console.log(resp.address);
+                this.setState({address:resp.address});
+                return;
+            }
             //Сообщение от сервера
             if (res.message) {
                 let command = res.message.split('|');
@@ -130,12 +137,13 @@ export default class App extends React.Component {
                     }
                 }    
             }
+            
 
             //Сообщение о полученном новом device
             if (res.newkey) {
                 this.storeData('device', res.newkey);
                 global.config.device = res.newkey;
-                //OsMoEventEmitter.configure(JSON.stringify(global.config));
+                OsMoEventEmitter.configure(JSON.stringify(global.config));
                 return;
             }
             //Ошибка при соединенеии
@@ -147,10 +155,13 @@ export default class App extends React.Component {
             }
         });  
         
+
+        /*
         AsyncStorage.getItem('trackerId', (err, result) => {
             this.setState({trackerId: result});
             console.log('trackerId from config:' + result);
         });
+        */
         AsyncStorage.getItem('motdtime', (err, result) => {
             this.setState({motdtime: result});
             console.log('motdtime from config:' + result);
@@ -264,6 +275,17 @@ const AppNavigator = createBottomTabNavigator({
     Settings: { screen: SettingsScreen },
     Log: { screen: LogScreen },
 }, {
+    navigationOptions:{
+          headerStyle:{
+                backgroundColor: '#212121', // this will handle the cutOff at the top the screen
+          },
+          headerTitleStyle:{
+                fontSize: 14,
+                fontWeight: '800',
+                textAlign: 'center',
+                flex: 1, // to make a header centered to the screen
+          } ,
+        },
     defaultNavigationOptions: ({ navigation }) => ({
         tabBarIcon: ({ focused, horizontal, tintColor }) => {
             const { routeName } = navigation.state;
@@ -297,6 +319,7 @@ const AppNavigator = createBottomTabNavigator({
             backgroundColor: 'black',
         },
     },
+    
 });
 
 const AppContainer = createAppContainer(AppNavigator);

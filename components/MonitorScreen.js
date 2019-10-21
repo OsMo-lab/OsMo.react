@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Text, View, Image, Platform, StatusBar, NativeModules } from 'react-native';
+import {SafeAreaView} from 'react-navigation';
 const {OsMoEventEmitter} = NativeModules;
   
 
@@ -40,8 +41,9 @@ export default class MonitorScreen extends React.Component {
   }
   render() {
     return (
+      <SafeAreaView style={{ backgroundColor: 'black', flex: 1 }}>
       <View style={{paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight,flex: 1, backgroundColor: 'black',paddingLeft:5}}>
-        <View style={{flexDirection: 'row',justifyContent: 'space-between'}}>
+        <View style={{flexDirection: 'row',justifyContent: 'space-between',backgroundColor:this.props.screenProps.appState.trackerId!='' ? 'black' : (this.props.screenProps.appState.address!='' ? 'yellow' : 'red') }}>
         <Image
           style={{width: 120, height: 43}}
           source={{uri: 'https://osmo.mobi/des/120.png'}}
@@ -79,6 +81,7 @@ export default class MonitorScreen extends React.Component {
           <Text style={{color:'white'}}>{this.props.screenProps.appState.motd}</Text>
         </View>
       </View>
+      </SafeAreaView>
     );
   }
 }

@@ -477,7 +477,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         if (result.Command.equals("checkaddres") && !(result.Jo == null))
         {
             params = Arguments.createMap();
-            params.putString("message",result.rawresponse);
+            params.putString("server",result.rawresponse);
             this.sendEvent(this.mReactContext,"onMessageReceived",params);
 
             socketRetryInt = 0;
@@ -1644,7 +1644,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         public void run()
         {
 
-            Log.d(this.getClass().getName(), " RUN IWriter");
+            //Log.d(this.getClass().getName(), " RUN IWriter");
             Looper.prepare();
             handler = new Handler()
             {

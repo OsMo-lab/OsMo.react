@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Text, View, Button,Platform, StatusBar, TextInput} from 'react-native';
+import {SafeAreaView} from 'react-navigation';
 
 export default class SignInScreen extends React.Component {
     constructor(props) {
@@ -11,6 +12,7 @@ export default class SignInScreen extends React.Component {
   render() {
     
     return (
+        <SafeAreaView style={{ backgroundColor: 'black', flex: 1 }}>
       <View style={{paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight, flex: 1, backgroundColor: 'black' }}>
         <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
             <Text  style={{color:'#FB671E',fontSize:20}}>Sign-In</Text> 
@@ -61,6 +63,7 @@ export default class SignInScreen extends React.Component {
             />
         </View>
       </View>
+      </SafeAreaView>
     );
   }
 
