@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Text, View, NativeModules,NativeEventEmitter, PermissionsAndroid } from 'react-native';
+import { Text, View, NativeModules,NativeEventEmitter, PermissionsAndroid, Alert } from 'react-native';
 import { createBottomTabNavigator, createAppContainer, createStackNavigator } from 'react-navigation';
 import AsyncStorage from '@react-native-community/async-storage';
 import AccountScreen from './components/AccountScreen';
@@ -54,12 +54,13 @@ export async function request_location_runtime_permission() {
         'message': 'OsMo.Mobi App needs access to your location '
       }
     )
+    /*
     if (granted === PermissionsAndroid.RESULTS.GRANTED) {
       Alert.alert("Location Permission Granted.");
     }
     else {
       Alert.alert("Location Permission Not Granted");
-    }
+    }*/
   } catch (err) {
     console.warn(err)
   }
@@ -74,6 +75,8 @@ export default class App extends React.Component {
             OsmoAppKey:Platform.OS === 'ios' ? "j4C32_f2bvK" : "dSA3dS-cF2Cj45",
             device:"",
             motd:"Welcome to OsMo",
+            authed:false,
+            sessionStarted:false,
         }
         super(props);
         this.state = {
@@ -127,6 +130,9 @@ export default class App extends React.Component {
                         let resp = JSON.parse(command[1]);
                         this.storeData('trackerId', resp.id);
                         this.setState({trackerId: resp.id});
+                        
+                        global.config.authed = true;
+                        OsMoEventEmitter.configure(JSON.stringify(global.config));
                         if (resp.uid > 0) {
                             this.setState({userNick : resp.name});
                         }
@@ -147,11 +153,16 @@ export default class App extends React.Component {
                         return;
                     }
                     if (command[0] == 'TO') {
+                        global.config.sessionStarted = true;
+                        OsMoEventEmitter.configure(JSON.stringify(global.config));
                         let resp = JSON.parse(command[1]);
                         this.setState({tracker:{state:'run',id:resp.url, distance:0,time:0,speed:0}});
                         return;
                     }
                     if (command[0] == 'TC') {
+                        global.config.sessionStarted = false;
+                        OsMoEventEmitter.configure(JSON.stringify(global.config));
+                        
                         let resp = JSON.parse(command[1]);
                         let tracker = Object.assign(this.state.tracker,{state:'stop',id:''} );
                         this.setState({tracker:tracker});

@@ -295,7 +295,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             if (settings.optBoolean("log")) {
                 log = true;
             }
-
+            authed = settings.optBoolean("authed",false);
+            sessionstarted = settings.optBoolean("sessionStarted",false);
         }
          catch (JSONException e) {
 
@@ -351,6 +352,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     @ReactMethod
     public void stopSendingCoordinates() {
+        this.stopServiceWork(true);
         return;
     }
 
@@ -657,27 +659,27 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         startForeground(1, notification);
         */
         setstarted(true);
-        /*
+
         if (live)
         {
-            if (myIM != null && authed)
+            if ( authed)
             {
                 if(opensession) {
                     sessionopentime = System.currentTimeMillis() / 1000;
-                    myIM.sendToServer("TO|"+sessionopentime, false);
-                    myIM.needopensession = true;
-                    myIM.needclosesession = false;
+                    sendToServer("TO|"+sessionopentime, false);
+                    needopensession = true;
+                    needclosesession = false;
                 }
             }
             else
             {
                 if(opensession) {
-                    myIM.needopensession = true;
-                    myIM.needclosesession = false;
+                    needopensession = true;
+                    needclosesession = false;
                 }
             }
         }
-
+        /*
         if (tts != null && OsMoDroid.settings.getBoolean("usetts", false))
         {
             tts.speak(getString(R.string.letsgo), TextToSpeech.QUEUE_ADD, null);
