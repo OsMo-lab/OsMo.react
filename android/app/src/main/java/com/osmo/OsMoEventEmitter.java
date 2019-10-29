@@ -80,6 +80,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import static android.provider.Settings.System.getString;
+import static androidx.core.content.ContextCompat.getSystemService;
 import static com.osmo.Netutil.SHA1;
 import static java.lang.StrictMath.abs;
 import static org.osmdroid.util.GeometryMath.DEG2RAD;
@@ -259,6 +260,10 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
         super(reactContext);
         this.mReactContext = reactContext;
+        this.myManager =  (LocationManager) reactContext.getSystemService(Context.LOCATION_SERVICE);
+        currentLocation = new Location("");
+        prevlocation = new Location("");
+        prevlocation_gpx = new Location("");
     }
 
     private void sendEvent(ReactContext reactContext,
@@ -340,6 +345,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     @ReactMethod
     public void startSendingCoordinates(Boolean once) {
+        this.startServiceWork(true);
         return;
     }
 
@@ -352,6 +358,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public void pauseSendingCoordinates() {
         return;
     }
+
+
 
     private void getServerInfo(String device) {
 
@@ -706,8 +714,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public void requestLocationUpdates(LocationListener locationListener)
     {
         List<String> list = myManager.getAllProviders();
-        try {
-        if (settings.getBoolean("usegps"))
+        if (settings.optBoolean("usegps",true))
         {
             if (list.contains(LocationManager.GPS_PROVIDER))
             {
@@ -725,12 +732,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
             }
         }
-        } catch (JSONException e) {
 
-        }
-
-        try {
-        if (settings.getBoolean("usenetwork"))
+        /*
+        if (settings.optBoolean("usenetwork",true))
         {
             if (list.contains(LocationManager.NETWORK_PROVIDER))
             {
@@ -745,9 +749,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 Log.d(this.getClass().getName(), "NETWORK провайдер не обнаружен");
             }
         }
-        } catch (JSONException e) {
-
-        }
+        */
     }
     private void setstarted(boolean started)
     {

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Text, View, NativeModules,NativeEventEmitter } from 'react-native';
+import { Text, View, NativeModules,NativeEventEmitter, PermissionsAndroid } from 'react-native';
 import { createBottomTabNavigator, createAppContainer, createStackNavigator } from 'react-navigation';
 import AsyncStorage from '@react-native-community/async-storage';
 import AccountScreen from './components/AccountScreen';
@@ -44,6 +44,27 @@ class IconWithBadge extends React.Component {
 }
 }
 
+export async function request_location_runtime_permission() {
+
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      {
+        'title': 'OsMo.mobi Location Permission',
+        'message': 'OsMo.Mobi App needs access to your location '
+      }
+    )
+    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+      Alert.alert("Location Permission Granted.");
+    }
+    else {
+      Alert.alert("Location Permission Not Granted");
+    }
+  } catch (err) {
+    console.warn(err)
+  }
+}
+
 export default class App extends React.Component {
     constructor(props) {
         global.config = {
@@ -78,7 +99,8 @@ export default class App extends React.Component {
         this.onMOTDUpdate;
     }
 
-    componentDidMount() {
+    async componentDidMount() {
+        await request_location_runtime_permission();
         this.state.groups.push({ name: 'Group 1', uid: 1 });
         this.state.groups.push({ name: 'Group 2', uid: 2 });
 
