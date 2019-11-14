@@ -167,18 +167,18 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     long timeperiod = 0;
     float workdistance;
     long workmilli = 0;
-    private int distance;
-    private float bearing;
+    private int distance = 50;
+    private float bearing = 0;
     private int speedbearing_gpx;
     private int bearing_gpx;
-    private float speedbearing;
-    private int speed;
+    private float speedbearing = 2;
+    private int speed = 3;
 
     private int count = 0;
     private int countFix = 0;
     private long lastgpslocationtime = 0;
     long prevnetworklocationtime = 0;
-    private int period;
+    private int period = 10000;
 
     private String accuracy = "";
     public String motd = "";
@@ -191,21 +191,20 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
 
     private String gpxbuffer = new String();
-    private boolean usebuffer = false;
-
+    private boolean usebuffer = true;
     private boolean firstsend = true;
     private boolean sended = true;
     private boolean gpx = false;
     private boolean live = true;
-    private int hdop;
+    private int hdop = 30;
     private String lastsay = "a";
     private String position;
     private long lastsmstime=0;
 
-    private int hdop_gpx;
-    private int period_gpx;
-    private int distance_gpx;
-    private int speed_gpx;
+    private int hdop_gpx = 30;
+    private int period_gpx = 0;
+    private int distance_gpx = 0;
+    private int speed_gpx = 3;
     protected boolean firstgpsbeepedon = false;
     private Location prevlocation;
     public static Location currentLocation;
@@ -358,7 +357,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     @ReactMethod
     public void pauseSendingCoordinates() {
+
         return;
+
     }
 
 
@@ -1014,8 +1015,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         {
             GeoPoint curGeoPoint = new GeoPoint(location);
             GeoPoint prevGeoPoint = new GeoPoint(prevlocation_spd);
-            try {
-            if (settings.getBoolean("imperial"))
+
+            if (settings.optBoolean("imperial",false))
             {
                 workdistance = workdistance +distanceBetween(curGeoPoint,prevGeoPoint)/ 1.609344f;//location.distanceTo(prevlocation_spd);
             }
@@ -1023,14 +1024,10 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             {
                 workdistance = workdistance + distanceBetween(curGeoPoint,prevGeoPoint);//location.distanceTo(prevlocation_spd);
             }
-            } catch (JSONException e) {
 
-            }
-
-            try {
-            if (settings.getBoolean("imperial"))
+            if (settings.optBoolean("imperial",false))
             {
-                if (settings.getBoolean("ttsavgspeed") && settings.getBoolean("usetts") && tts != null && !tts.isSpeaking() && ((int) workdistance) / 1000/1.609344 > intKM)
+                if (settings.optBoolean("ttsavgspeed",false) && settings.optBoolean("usetts",false) && tts != null && !tts.isSpeaking() && ((int) workdistance) / 1000/1.609344 > intKM)
                 {
                     intKM = (int)( workdistance / 1000/1.609344);
                     //tts.speak(getString(R.string.going) + ' ' + Integer.toString(intKM) + ' ' + "Miles" + ',' + getString(R.string.avg) + ' ' + df1.format(avgspeed * 3600) + ',' + getString(R.string.inway) + ' ' + formatInterval(timeperiod), TextToSpeech.QUEUE_ADD, null);
@@ -1039,14 +1036,11 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             }
             else
             {
-                if (settings.getBoolean("ttsavgspeed") && settings.getBoolean("usetts") && tts != null && !tts.isSpeaking() && ((int) workdistance) / 1000 > intKM)
+                if (settings.optBoolean("ttsavgspeed",false) && settings.optBoolean("usetts",false) && tts != null && !tts.isSpeaking() && ((int) workdistance) / 1000 > intKM)
                 {
                     intKM = (int) workdistance / 1000;
                     //tts.speak(getString(R.string.going) + ' ' + Integer.toString(intKM) + ' ' + "KM" + ',' + getString(R.string.avg) + ' ' + df1.format(avgspeed * 3600) + ',' + getString(R.string.inway) + ' ' + formatInterval(timeperiod), TextToSpeech.QUEUE_ADD, null);
                 }
-            }
-            } catch (JSONException e) {
-
             }
             //if(log)Log.d(this.getClass().getName(),"Log of Workdistance, Workdistance="+ Float.toString(workdistance)+" location="+location.toString()+" prevlocation_spd="+prevlocation_spd.toString()+" distanceto="+Float.toString(location.distanceTo(prevlocation_spd)));
             prevlocation_spd.set(location);
@@ -1056,25 +1050,19 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         }
         if ((int) location.getAccuracy() < hdop_gpx)
         {
-            /*
-            if(OsMoDroid.settings.getBoolean("imperial",false))
+
+            if(settings.optBoolean("imperial",false))
             {
                 currentspeed = location.getSpeed()*0.621371f;
                 altitude= (int) (location.getAltitude()*3.28084);
-            }
-            else
-            {
-
-             */
+            } else {
                 currentspeed = location.getSpeed();
                 altitude= (int) location.getAltitude();
-            //}
-
+            }
 
             boolean filled=true;
             int summ=0;
             int meanaltitude=Integer.MIN_VALUE;
-
 
             altitudesamples[altitudesamples.length-1] = altitude;
 
@@ -1110,8 +1098,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 }
             }
 
-            /*
-            if(OsMoDroid.settings.getBoolean("imperial",false))
+
+            if(settings.optBoolean("imperial",false))
             {
                 if (location.getSpeed()*0.621371f > maxspeed)
                 {
@@ -1119,7 +1107,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 }
             }
             else
-            {*/
+
                 if (location.getSpeed() > maxspeed)
                 {
                     maxspeed = location.getSpeed();
@@ -1136,17 +1124,15 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         }
         //if(log)Log.d(this.getClass().getName(), df0.format(location.getSpeed()*3.6).toString());
         //if(log)Log.d(this.getClass().getName(), df0.format(prevlocation.getSpeed()*3.6).toString());
-        try {
-        if (settings.getBoolean("ttsspeed") && settings.getBoolean("usetts") && tts != null && !tts.isSpeaking() && !(df0.format(location.getSpeed() * 3.6).toString()).equals(lastsay))
+
+        if (settings.optBoolean("ttsspeed",false) && settings.optBoolean("usetts",false) && tts != null && !tts.isSpeaking() && !(df0.format(location.getSpeed() * 3.6).toString()).equals(lastsay))
         {
             //if(log)Log.d(this.getClass().getName(), df0.format(location.getSpeed()*3.6).toString());
             //if(log)Log.d(this.getClass().getName(), df0.format(prevlocation.getSpeed()*3.6).toString());
             tts.speak(df0.format(location.getSpeed() * 3.6), TextToSpeech.QUEUE_ADD, null);
             lastsay = df0.format(location.getSpeed() * 3.6).toString();
         }
-        } catch (JSONException e) {
 
-        }
         position = (df6.format(location.getLatitude()) + ", " + df6.format(location.getLongitude()) + "\nСкорость:" + df1.format(location.getSpeed() * 3.6)) + " Км/ч";
         //position = ( String.format("%.6f", location.getLatitude())+", "+String.format("%.6f", location.getLongitude())+" = "+String.format("%.1f", location.getSpeed()));
         //if (location.getTime()>lastfix+3000)notifygps(false);
@@ -1188,48 +1174,25 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     brng_gpx = Math.toDegrees(Math.atan2(y, x)); //.toDeg();
                     //position = position + "\n" + getString(R.string.TrackCourseChange) + df1.format(abs(brng_gpx - prevbrng_gpx));
                     refresh();
-                    try {
-                    if (settings.getBoolean("modeAND_gpx") && (int) location.getAccuracy() < hdop_gpx && location.getSpeed() >= speed_gpx / 3.6 && (location.distanceTo(prevlocation_gpx) > distance_gpx && location.getTime() > (prevlocation_gpx.getTime() + period_gpx) && (location.getSpeed() >= speedbearing_gpx / 3.6 && abs(brng_gpx - prevbrng_gpx) >= bearing_gpx)))
+
+
+                    if ((int) location.getAccuracy() < hdop_gpx && location.getSpeed() >= speed_gpx / 3.6 && (location.distanceTo(prevlocation_gpx) > distance_gpx || location.getTime() > (prevlocation_gpx.getTime() + period_gpx) || (location.getSpeed() >= speedbearing_gpx / 3.6 && abs(brng_gpx - prevbrng_gpx) >= bearing_gpx)))
                     {
                         prevlocation_gpx.set(location);
                         prevbrng_gpx = brng_gpx;
                         writegpx(location);
                     }
-                    } catch (JSONException e) {
 
-                    }
-                    try {
-                    if (!settings.getBoolean("modeAND_gpx") && (int) location.getAccuracy() < hdop_gpx && location.getSpeed() >= speed_gpx / 3.6 && (location.distanceTo(prevlocation_gpx) > distance_gpx || location.getTime() > (prevlocation_gpx.getTime() + period_gpx) || (location.getSpeed() >= speedbearing_gpx / 3.6 && abs(brng_gpx - prevbrng_gpx) >= bearing_gpx)))
-                    {
-                        prevlocation_gpx.set(location);
-                        prevbrng_gpx = brng_gpx;
-                        writegpx(location);
-                    }
-                    } catch (JSONException e) {
-
-                    }
                 }
                 else
                 {
-                    //if(log)Log.d(this.getClass().getName(), "Пишем трек без курса");
-                    try {
-                    if (settings.getBoolean("modeAND_gpx") && location.getSpeed() >= speed_gpx / 3.6 && (int) location.getAccuracy() < hdop_gpx && (location.distanceTo(prevlocation_gpx) > distance_gpx && location.getTime() > (prevlocation_gpx.getTime() + period_gpx)))
+
+                    if (location.getSpeed() >= speed_gpx / 3.6 && (int) location.getAccuracy() < hdop_gpx && (location.distanceTo(prevlocation_gpx) > distance_gpx || location.getTime() > (prevlocation_gpx.getTime() + period_gpx)))
                     {
                         writegpx(location);
                         prevlocation_gpx.set(location);
                     }
-                    } catch (JSONException e) {
 
-                    }
-                    try {
-                    if (!settings.getBoolean("modeAND_gpx") && location.getSpeed() >= speed_gpx / 3.6 && (int) location.getAccuracy() < hdop_gpx && (location.distanceTo(prevlocation_gpx) > distance_gpx || location.getTime() > (prevlocation_gpx.getTime() + period_gpx)))
-                    {
-                        writegpx(location);
-                        prevlocation_gpx.set(location);
-                    }
-                    } catch (JSONException e) {
-
-                    }
                 }
             }
             Log.d(this.getClass().getName(), "sessionstarted=" + sessionstarted);
@@ -1237,8 +1200,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             if (live)
             {
                 //LocalService.addlog("live and session satrted");
-                if (bearing > 0)
-                {
+                if (bearing > 0) {
                     //LocalService.addlog("bearing>0");
                     //if(log)Log.d(this.getClass().getName(), "Попали в проверку курса для отправки");
                     //if(log)Log.d(this.getClass().getName(), "Accuracey"+location.getAccuracy()+"hdop"+hdop);
@@ -1252,24 +1214,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     brng = Math.toDegrees(Math.atan2(y, x)); //.toDeg();
                     //position = position + "\n" + getString(R.string.SendCourseChange) + df1.format(abs(brng - prevbrng));
                     refresh();
-                    try {
-                    if (settings.getBoolean("modeAND") && (int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance && location.getTime() > (prevlocation.getTime() + period) && (location.getSpeed() >= (speedbearing / 3.6) && abs(brng - prevbrng) >= bearing)))
-                    {
-                        //LocalService.addlog("modeAND and accuracy and speed");
-                        prevlocation.set(location);
-                        prevbrng = brng;
-                        //if(log)Log.d(this.getClass().getName(), "send(location)="+location);
-                        sendlocation(location,true);
-                    }
-                    else
-                    {
-                        //LocalService.addlog("modeAND and accuracy and speed -ELSE");
-                    }
-                    } catch (JSONException e) {
 
-                    }
-                    try {
-                    if (!settings.getBoolean("modeAND") && (int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance || location.getTime() > (prevlocation.getTime() + period) || (location.getSpeed() >= (speedbearing / 3.6) && abs(brng - prevbrng) >= bearing)))
+
+                    if ((int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance || location.getTime() > (prevlocation.getTime() + period) || (location.getSpeed() >= (speedbearing / 3.6) && abs(brng - prevbrng) >= bearing)))
                     {
                         //LocalService.addlog("not modeAND and accuracy and speed");
                         prevlocation.set(location);
@@ -1281,31 +1228,14 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     {
                         //LocalService.addlog("not modeAND and accuracy and speed - ELSE");
                     }
-                    } catch (JSONException e) {
 
-                    }
                 }
                 else
                 {
 
-                    try {
-                    if (settings.getBoolean("modeAND") && (int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance && location.getTime() > (prevlocation.getTime() + period)))
-                    {
-                        //LocalService.addlog("modeAND and accuracy and speed");
-                        //if(log)Log.d(this.getClass().getName(), "Accuracey"+location.getAccuracy()+"hdop"+hdop);
-                        prevlocation.set(location);
-                        //if(log)Log.d(this.getClass().getName(), "send(location)="+location);
-                        sendlocation(location,true);
-                    }
-                    else
-                    {
-                        //LocalService.addlog("modeAND and accuracy and speed - ELSE");
-                    }
-                    } catch (JSONException e) {
 
-                    }
-                    try {
-                    if (!settings.getBoolean("modeAND") && (int) location.getAccuracy() < hdop && location.getSpeed() >= speed / 3.6 && (location.distanceTo(prevlocation) > distance || location.getTime() > (prevlocation.getTime() + period)))
+
+                    if ((int) location.getAccuracy() < hdop /*&& location.getSpeed() >= speed / 3.6*/ && (location.distanceTo(prevlocation) > distance || location.getTime() > (prevlocation.getTime() + period)))
                     {
                         //LocalService.addlog("not modeAND and accuracy and speed");
                         //if(log)Log.d(this.getClass().getName(), "Accuracey"+location.getAccuracy()+"hdop"+hdop);
@@ -1316,9 +1246,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     else
                     {
                         //LocalService.addlog("modeAND and accuracy and speed - ELSE");
-                    }
-                    } catch (JSONException e) {
-
                     }
                 }
             }
@@ -1349,7 +1276,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 //	- 5 = hashstring (уникальный хеш пользователя)
 //	- 6 = checknumint(3) (контрольное число к хешу)
         //T|L53.1:30.3S2A4H2B23
-        if (authed && sending.equals("")&&sessionstarted)
+        if (authed && sending.equals("") && sessionstarted)
         {
             sending=locationtoSending(location);
             if(!gps)
@@ -1373,10 +1300,10 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 buffercounter++;
             }
         }
-        try {
-        if (!authed && settings.getBoolean("sendsms"))
+
+        if (!authed && settings.optBoolean("sendsms",false))
         {
-            if(SystemClock.uptimeMillis()>lastsmstime+1000*Integer.parseInt(settings.getString("smsperiod"/*,"300"*/)))
+            if(SystemClock.uptimeMillis()>lastsmstime+1000*Integer.parseInt(settings.optString("smsperiod","300")))
             {
                 lastsmstime=SystemClock.uptimeMillis();
                 try
@@ -1409,10 +1336,50 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         {
             //addlog(Boolean.toString(myIM==null)+Boolean.toString(!authed)+Boolean.toString(OsMoDroid.settings.getBoolean("sendsms",false)));
         }
-        } catch (JSONException e) {
-
-        }
     }
+
+    private String locationtoSending(Location location) {
+        String sending="";
+        Log.d(this.getClass().getName(), "Отправка:" + authed + " s " + sending);
+        if ((location.getSpeed() * 3.6) >= 6)
+        {
+            sending =
+                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
+                            + "S" + df0.format(location.getSpeed())
+                            + "A" + df0.format(location.getAltitude())
+                            + "H" + df0.format(location.getAccuracy())
+                            + "C" + df0.format(location.getBearing());
+            if (usebuffer)
+            {
+                sending = sending + "T" + location.getTime() / 1000;
+            }
+        }
+        if ((location.getSpeed() * 3.6) < 6)
+        {
+            sending =
+                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
+                            + "S" + df0.format(location.getSpeed())
+                            + "A" + df0.format(location.getAltitude())
+                            + "H" + df0.format(location.getAccuracy());
+            if (usebuffer)
+            {
+                sending = sending + "T" + location.getTime() / 1000;
+            }
+        }
+        if ((location.getSpeed() * 3.6) <= 1)
+        {
+            sending =
+                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
+                            + "A" + df0.format(location.getAltitude())
+                            + "H" + df0.format(location.getAccuracy());
+            if (usebuffer)
+            {
+                sending = sending + "T" + location.getTime() / 1000;
+            }
+        }
+        return sending;
+    }
+
 
     public void sendToServer(String str, boolean gui) {
         Message msg = new Message();
@@ -1435,6 +1402,13 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 Log.d(this.getClass().getName(), " sending " + str);
                 executedCommandArryaList.addAll(cl);
                 iMWriter.handler.sendMessage(msg);
+
+                WritableMap params;
+                params = Arguments.createMap();
+                params.putString("client",str);
+                this.sendEvent(this.mReactContext,"onMessageReceived",params);
+
+
                 refresh();
             } else {
                 //LocalService.addlog("panic! handler is null");
@@ -1598,47 +1572,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         return String.format("%02d:%02d:%02d", l / (1000 * 60 * 60), (l % (1000 * 60 * 60)) / (1000 * 60), ((l % (1000 * 60 * 60)) % (1000 * 60)) / 1000);
     }
 
-    private String locationtoSending(Location location) {
-        String sending="";
-        Log.d(this.getClass().getName(), "Отправка:" + authed + " s " + sending);
-        if ((location.getSpeed() * 3.6) >= 6)
-        {
-            sending =
-                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
-                            + "S" + df0.format(location.getSpeed())
-                            + "A" + df0.format(location.getAltitude())
-                            + "H" + df0.format(location.getAccuracy())
-                            + "C" + df0.format(location.getBearing());
-            if (usebuffer)
-            {
-                sending = sending + "T" + location.getTime() / 1000;
-            }
-        }
-        if ((location.getSpeed() * 3.6) < 6)
-        {
-            sending =
-                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
-                            + "S" + df0.format(location.getSpeed())
-                            + "A" + df0.format(location.getAltitude())
-                            + "H" + df0.format(location.getAccuracy());
-            if (usebuffer)
-            {
-                sending = sending + "T" + location.getTime() / 1000;
-            }
-        }
-        if ((location.getSpeed() * 3.6) <= 1)
-        {
-            sending =
-                    "T|L" + df6.format(location.getLatitude()) + ":" + df6.format(location.getLongitude())
-                            + "A" + df0.format(location.getAltitude())
-                            + "H" + df0.format(location.getAccuracy());
-            if (usebuffer)
-            {
-                sending = sending + "T" + location.getTime() / 1000;
-            }
-        }
-        return sending;
-    }
 
     public class IMWriter implements Runnable
     {
@@ -1793,6 +1726,43 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                         WritableMap params = Arguments.createMap();
                         params.putString("message", str);
                         sendEvent(mReactContext, "onMessageReceived", params);
+
+                        String command = "";
+                        String param = "";
+                        String addict = "";
+                        try {
+                            command = str.substring(0, str.indexOf('|'));
+                        } catch (Exception e1) {
+                            command = str;
+                        }
+                        if (command.indexOf(':') != -1) {
+                            param = command.substring(command.indexOf(':') + 1);
+                            command = command.substring(0, command.indexOf(':'));
+                        }
+                        if (str.contains("|")) {
+                            addict = str.substring(str.indexOf('|') + 1);
+                        }
+
+
+                        if (command.equals("AUTH")) {
+                            sendToServer("PUSH|ТестоваяБла-бла-бла", false);
+                        }
+                        if (command.equals("T")) {
+                            sendcounter++;
+                            sending = "";
+                            if (sendingbuffer.size() == 0 && buffer.size() != 0) {
+                                sendingbuffer.addAll(buffer.subList(0,buffer.size()>100?100:buffer.size()));
+                                buffer.removeAll(sendingbuffer);
+                                sendToServer("B|" + new JSONArray(sendingbuffer), false);
+                            }
+                            /*
+                            if (sendsound && !mayak) {
+                                soundPool.play(sendpalyer, 1f, 1f, 1, 0, 1f);
+                                mayak = false;
+                            }
+                            */
+                        }
+
 
 
                         /*
