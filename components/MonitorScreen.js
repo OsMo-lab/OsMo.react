@@ -1,12 +1,9 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Text, View, Image, Platform, StatusBar, NativeModules } from 'react-native';
+import {Text, View, Image, Platform, StatusBar, NativeModules, Alert, Clipboard, Linking } from 'react-native';
 import {SafeAreaView} from 'react-navigation';
 const {OsMoEventEmitter} = NativeModules;
   
-
-
-
 export default class MonitorScreen extends React.Component {
   TrackerClick() {
     if (this.props.screenProps.appState.tracker.state == 'stop'){
@@ -14,6 +11,40 @@ export default class MonitorScreen extends React.Component {
     } else {
       OsMoEventEmitter.stopSendingCoordinates();
     }
+  }
+
+  TrackerUrlClick() {
+    if (this.props.screenProps.appState.tracker.id!='') {
+      let url = 'https://osmo.mobi/s/' + this.props.screenProps.appState.tracker.id;
+      Alert.alert(
+        'Alert Title',
+        'Track URL',
+        [
+          {text: 'Copy to clipboard', onPress: () => Clipboard.setString(url)},
+          
+          {text: 'Open URL', onPress: () => {
+            Linking.canOpenURL(url)
+                .then((supported) => {
+                  if (!supported) {
+                    console.log("Can't handle url: " + url);
+                  } else {
+                    return Linking.openURL(url);
+                  }
+                })
+                .catch((err) => console.error('An error occurred', err))
+            }
+          },
+          {
+            text: 'Cancel',
+            onPress: () => console.log('Cancel Pressed'),
+            style: 'cancel',
+          },
+        ],
+        {cancelable: false},
+      );
+
+    }
+    
   }
 
   TrackerPauseClick() {
@@ -66,7 +97,7 @@ export default class MonitorScreen extends React.Component {
           <Text style={{color:'#FB671E',fontSize:32}}>{this.props.screenProps.appState.tracker.speed}</Text>
         </View>
         <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
-          <Text style={{justifyContent: 'center',color:'dodgerblue', fontSize:18}}>{this.props.screenProps.appState.tracker.id!=''?this.props.screenProps.appState.tracker.id:'Press Start Button'}</Text>
+          <Text style={{justifyContent: 'center',color:'dodgerblue', fontSize:18}} onPress={() => this.TrackerUrlClick()}>{this.props.screenProps.appState.tracker.id!=''?this.props.screenProps.appState.tracker.id:'Press Start Button'}</Text>
         </View>
         <View style={{flexDirection: 'row'}}>
           <Text style={{color:'lightgray',fontSize:20}}>TrackerID:</Text>

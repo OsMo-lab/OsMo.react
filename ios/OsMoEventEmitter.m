@@ -15,6 +15,7 @@
 RCT_EXTERN_METHOD(connect)
 RCT_EXTERN_METHOD(configure:(NSString)config)
 RCT_EXTERN_METHOD(getMessageOfTheDay)
+RCT_EXTERN_METHOD(sendMessage:(NSString)config)
 RCT_EXTERN_METHOD(startSendingCoordinates:(BOOL)once)
 RCT_EXTERN_METHOD(stopSendingCoordinates)
 RCT_EXTERN_METHOD(pauseSendingCoordinates)

@@ -302,6 +302,10 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         }
 
     }
+    @ReactMethod
+    public void sendMessage(String message) {
+        this.sendToServer(message, false);
+    }
 
     @ReactMethod
     public void connect() {
@@ -1743,10 +1747,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                             addict = str.substring(str.indexOf('|') + 1);
                         }
 
-
-                        if (command.equals("AUTH")) {
-                            sendToServer("PUSH|ТестоваяБла-бла-бла", false);
-                        }
                         if (command.equals("T")) {
                             sendcounter++;
                             sending = "";

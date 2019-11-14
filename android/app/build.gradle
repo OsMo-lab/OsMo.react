@@ -199,9 +199,6 @@ dependencies {
 
     implementation "com.facebook.react:react-native:+"  // From node_modules
     implementation "org.osmdroid:osmdroid-android:5.6.4" //Import from OsmoDroid-TLS
-    //implementation "com.google.firebase:firebase-messaging:11.4.2"//Import from OsmoDroid-TLS
-
-
 }
 
 // Run this once to be able to run the application with BUCK

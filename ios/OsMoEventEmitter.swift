@@ -68,6 +68,11 @@ class OsMoEventEmitter: RCTEventEmitter{
     }
   }
   
+  @objc func sendMessage(_ message: String){
+     connectionManager.send(request: message)
+  }
+  
+  
   @objc func connect(){
     connectionManager.connect()
   }

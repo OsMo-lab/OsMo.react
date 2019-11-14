@@ -156,7 +156,12 @@ export default class App extends React.Component {
                         global.config.sessionStarted = true;
                         OsMoEventEmitter.configure(JSON.stringify(global.config));
                         let resp = JSON.parse(command[1]);
-                        this.setState({tracker:{state:'run',id:resp.url, distance:0,time:0,speed:0}});
+                        if (resp.error) {
+                            OsMoEventEmitter.sendMessage('PUSH|bla-bla-bla');
+
+                        } else {
+                            this.setState({tracker:{state:'run',id:resp.url, distance:0,time:0,speed:0}});
+                        }
                         return;
                     }
                     if (command[0] == 'TC') {
