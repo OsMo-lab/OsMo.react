@@ -152,6 +152,7 @@ export default class App extends React.Component {
                         this.setState(st);
                         return;
                     }
+
                     if (command[0] == 'TO') {
                         global.config.sessionStarted = true;
                         OsMoEventEmitter.configure(JSON.stringify(global.config));
@@ -173,7 +174,13 @@ export default class App extends React.Component {
                         this.setState({tracker:tracker});
                         return;
                     }
-                }    
+                    
+                } else {
+                    if (command[0] == 'PP') {
+                        OsMoEventEmitter.sendMessage('P');
+                        return;
+                    }
+                } 
             }
             
 

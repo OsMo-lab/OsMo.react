@@ -866,11 +866,13 @@ class ConnectionManager: NSObject{
       
       return
     }
+    /*
     if command == AnswTags.pong.rawValue {
       log.enqueue("server wants answer ;)")
       sendPing()
       return
     }
+ */
     if command == AnswTags.coordinate.rawValue {
       let cnt = Int(addict)
       if cnt ?? 0  > 0 {

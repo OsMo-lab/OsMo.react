@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>242374769580-ahcq74f73krmh7eh5ih3vr6fec5sum4r.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.242374769580-ahcq74f73krmh7eh5ih3vr6fec5sum4r</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBzhfWURVP8dnsOC6GO3pD9sHgtFvRV9dc</string>
+	<key>GCM_SENDER_ID</key>
+	<string>242374769580</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>alexey.sirotkin.osmo.mobi</string>
+	<key>PROJECT_ID</key>
+	<string>osmomobi-7491e</string>
+	<key>STORAGE_BUCKET</key>
+	<string>osmomobi-7491e.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:242374769580:ios:ce9130ba211e4500809809</string>
+	<key>DATABASE_URL</key>
+	<string>https://osmomobi-7491e.firebaseio.com</string>
+</dict>
+</plist>
