@@ -1,12 +1,16 @@
 import * as React from 'react';
-import { Text, View, Button,Platform, StatusBar, TextInput} from 'react-native';
+import { Text, View, Button,Platform, StatusBar, TextInput, Alert} from 'react-native';
 import {SafeAreaView} from 'react-navigation';
 
 export default class SignInScreen extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            newUser: false
+            newUser: false,
+            pass:"",
+            pass2:"",
+            email:"",
+            nick:"",
         }
     }
   render() {
@@ -25,31 +29,41 @@ export default class SignInScreen extends React.Component {
             <Text  style={{color:'#FB671E',fontSize:20}}>E-mail</Text> 
         </View>
         <View >
-            <TextInput placeholder="user@site.com" style={{borderRadius: 10 ,color:'black',backgroundColor:'#ffd479',fontSize:18}}></TextInput> 
+            <TextInput placeholder="user@site.com" style={{borderRadius: 10 ,color:'black',backgroundColor:'#ffd479',fontSize:18}} onChangeText={(text) => this.setState({email:text})}></TextInput> 
         </View>
         <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-            <Text  style={{color:'#FB671E',fontSize:20}}>Password</Text> 
+            {this.state.newUser ? (
+            <Text style={{color:'#FB671E',fontSize:20}}>Nick</Text> 
+            ) : null }
+        </View>
+        <View >
+            {this.state.newUser ? (
+            <TextInput placeholder="Your nice nickname" onChangeText={(text) => this.setState({nick:text})} style={{borderRadius: 10 ,color:'black',backgroundColor:'#ffd479',fontSize:18}}></TextInput> 
+            ) : null }
+        </View>
+        <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+            <Text style={{color:'#FB671E',fontSize:20}}>Password</Text> 
             {!this.state.newUser ? (
             <Text  style={{color:'dodgerblue',fontSize:20}}>Forgot?</Text> 
             ) : null }
         </View>
         <View >
-            <TextInput secureTextEntry={true} textContentType="password" style={{borderRadius: 10 ,color:'black',backgroundColor:'#ffd479',fontSize:18}}></TextInput> 
+            <TextInput autoCorrect={false} secureTextEntry={true} textContentType="password"  onChangeText={(text) => this.setState({pass:text})} style={{borderRadius: 10 ,color:'black',backgroundColor:'#ffd479',fontSize:18}}></TextInput> 
         </View>
         <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
             {this.state.newUser ? (
-            <Text  style={{color:'#FB671E',fontSize:20}}>Confirm password</Text> 
+            <Text style={{color:'#FB671E',fontSize:20}}>Confirm password</Text> 
             ) : null }
         </View>
         <View >
             {this.state.newUser ? (
-            <TextInput secureTextEntry={true} textContentType="password" style={{borderRadius: 10 ,color:'black',backgroundColor:'#ffd479',fontSize:18}}></TextInput> 
+            <TextInput autoCorrect={false} secureTextEntry={true} textContentType="password"  onChangeText={(text) => this.setState({pass2:text})} style={{borderRadius: 10 ,color:'black',backgroundColor:'#ffd479',fontSize:18}}></TextInput> 
             ) : null }
         </View>
         
         <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
             <Button
-                onPress={() => this.CancelClick()}
+                onPress={() => this.ActionClick()}
                 title="Sign-In"
                 color="#FB671E"
                 style={{paddingLeft:20}}
@@ -66,12 +80,69 @@ export default class SignInScreen extends React.Component {
     );
   }
 
+  /* Регистрация нового пользователя и авторизация существующего*/
+  getMoviesFromApiAsync() {
+    
+  }
+
+  ActionClick() {
+    let url = this.state.newUser ? "https://api2.osmo.mobi/signup?" : "https://api2.osmo.mobi/signin?";
+
+    if (this.state.newUser) {
+        if (this.state.nick == "") {
+            Alert.alert(
+                'Register new user',
+                'Enter Nick!',
+                [
+                  {text: 'Ok',},
+                ]
+            );
+            return;
+        }
+        if (this.state.pass != this.state.pass2) {
+            Alert.alert(
+                'Register new user',
+                'Passwords did not matches!',
+                [
+                  {text: 'Ok',},
+                ]
+            );
+            return;
+        }
+    }
+    
+    var data = "key=" + encodeURIComponent(global.config.device) + "&email=" + encodeURIComponent(this.state.email) + "&password=" + encodeURIComponent(this.state.pass);
+    if (this.state.newUser) {
+        data = data  + "&nick=" + encodeURIComponent(this.state.nick);
+    } 
+    
+    let options = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body:data
+    };
+    fetch(url,options)
+      .then((response) => response.json())
+      .then((responseJson) => {
+        if (responseJson.auth) {
+            console.log(responseJson);
+            this.props.screenProps.onUserAuthorize(responseJson.nick);
+            this.props.navigation.pop();
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }
+
+  /* Переключение режима вход|регистрация */ 
   RegisterClick() {
     this.setState({newUser: !this.state.newUser});
   }
-
+  
   CancelClick() {
-    this.props.navigation.pop()
-    console.log('CancelClick');
+    this.props.navigation.pop();
   }
 }

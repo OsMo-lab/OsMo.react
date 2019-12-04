@@ -230,12 +230,12 @@ export default class App extends React.Component {
     render() {
         let props = {
             appState: this.state,
-            onResetAuthorization: () => this.onResetAuthorization() 
+            onResetAuthorization: () => this.onResetAuthorization(), 
         }; 
+        props.onUserAuthorize = this.onUserAuthorize.bind(this); 
         return <AppContainer screenProps = {props}/>;
     }
 
-    
     async storeData (name,value){
         try {
             await AsyncStorage.setItem(name, value)
@@ -277,7 +277,11 @@ export default class App extends React.Component {
         OsMoEventEmitter.configure(JSON.stringify(global.config));
         OsMoEventEmitter.connect();
     }
-    
+    onUserAuthorize(nick) {
+        console.log(nick);
+        this.setState({userNick:nick});
+    }
+
     onResetAuthorization() {
         if (this.state.tracker.state == 'stop'){
             this.clearKeys();
