@@ -284,7 +284,7 @@ export default class App extends React.Component {
         }
     }
 }
-/*
+
 const SinInStack = createStackNavigator(
     {
         Account: {
@@ -307,14 +307,13 @@ const SinInStack = createStackNavigator(
         defaultNavigationOptions: {
           gesturesEnabled: false,
         },
-    }
-    
+    }  
 );
-*/
+
 const AppNavigator = createBottomTabNavigator({
     Monitor: { screen: MonitorScreen },
-    Account: { screen: AccountScreen },
-    //Account: { screen: SignInScreen },
+    //Account: { screen: AccountScreen },
+    Account: { screen: SinInStack },
     Map: { screen: MapScreen },
     History: { screen: HistoryScreen },
     Settings: { screen: SettingsScreen },

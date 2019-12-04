@@ -47,7 +47,6 @@ export default class SignInScreen extends React.Component {
             ) : null }
         </View>
         
-        
         <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
             <Button
                 onPress={() => this.CancelClick()}
@@ -72,6 +71,7 @@ export default class SignInScreen extends React.Component {
   }
 
   CancelClick() {
+    this.props.navigation.pop()
     console.log('CancelClick');
   }
 }

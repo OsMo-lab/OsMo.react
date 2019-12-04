@@ -12,7 +12,7 @@ export default class AccountScreen extends React.Component {
         <Text  style={{color:'#FB671E',fontSize:20}}>Account</Text> 
         <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
           <Ionicons name='ios-contact' size={80} color='#FB671E' />
-          <Ionicons style={{paddingRight:80,alignSelf: "center"}} name={this.props.screenProps.appState.userNick=='unknown'?'ios-log-in':'ios-logout'} size={40} color='#FB671E' />
+          <Ionicons style={{paddingRight:80,alignSelf: "center"}} name={this.props.screenProps.appState.userNick=='unknown'?'ios-log-in':'ios-logout'} size={40} color='#FB671E' onPress={() => this.props.navigation.push('SignIn')}/>
           <Text style={{color:'gray'}}>{this.props.screenProps.appState.userNick}</Text>
         </View>
          <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
