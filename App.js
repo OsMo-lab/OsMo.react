@@ -245,9 +245,8 @@ export default class App extends React.Component {
     }
 
     clearKeys() {
-        const {OsMoEventEmitter} = NativeModules;
         console.log('clearKeys');    
-        global.device = "";
+        global.config.device = "";
         
         this.state.log.push({message:'clearKeys'});
         removeValue = async () => {
@@ -274,6 +273,8 @@ export default class App extends React.Component {
         }
         let tracker = Object.assign(this.state.tracker,{state:'stop',id:''} );
         this.setState({trackerId:'',motd:'', motdtime:0,userNick:'unknown',tracker:tracker});
+        
+        const {OsMoEventEmitter} = NativeModules;
         OsMoEventEmitter.configure(JSON.stringify(global.config));
         OsMoEventEmitter.connect();
     }

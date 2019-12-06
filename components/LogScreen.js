@@ -14,6 +14,7 @@ export default class LogScreen extends React.Component {
           data={this.props.screenProps.appState.log}
           extraData={this.props.screenProps.appState.log.length}
           renderItem={({item}) => <Text style={{height:50,color:'white'}}>{item.message}</Text>}
+          keyExtractor={(item, index) => index.toString()}
         />
        
       </View>

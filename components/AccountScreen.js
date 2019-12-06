@@ -27,6 +27,7 @@ export default class AccountScreen extends React.Component {
         ItemSeparatorComponent={FlatListItemSeparator}
         data={this.props.screenProps.appState.groups}
         renderItem={({item}) => <Text style={{height:100,color:'white'}}>{item.name}</Text>}
+        keyExtractor={(item, index) => index.toString()}
       />
       </View>
       </SafeAreaView>

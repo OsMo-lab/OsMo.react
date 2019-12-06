@@ -14,6 +14,7 @@ export default class HistoryScreen extends React.Component {
         ItemSeparatorComponent={FlatListItemSeparator}
         data={[{key: 'Trip 1'}, {key: 'Trip 2'}, {key: 'Trip 3'}, {key: 'Trip 4'}, {key: 'Trip 5'}, {key: 'Trip 6'}]}
         renderItem={({item}) => <Text style={{height:150,color:'white'}}>{item.key}</Text>}
+        keyExtractor={(item, index) => index.toString()}
         />
       </View> 
       </SafeAreaView>

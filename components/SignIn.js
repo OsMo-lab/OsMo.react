@@ -127,9 +127,17 @@ export default class SignInScreen extends React.Component {
       .then((response) => response.json())
       .then((responseJson) => {
         if (responseJson.auth) {
-            console.log(responseJson);
             this.props.screenProps.onUserAuthorize(responseJson.nick);
             this.props.navigation.pop();
+        } else if (responseJson.error_description){
+            Alert.alert(
+                this.state.newUser ? 'Sign In Error' : 'Sign Up Error',
+                responseJson.error_description,
+                [
+                  {text: 'Ok',},
+                ]
+            );
+            return;
         }
       })
       .catch((error) => {

@@ -310,8 +310,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     @ReactMethod
     public void connect() {
         String device = settings.optString("device");
-        Log.d(this.getClass().getSimpleName(), "device:" + device);
-
 
         running = true;
         connecting = true;
@@ -326,9 +324,13 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         readerThread.setPriority(Thread.MIN_PRIORITY);
         writerThread.setPriority(Thread.MIN_PRIORITY);
 
-        if (device == null || device == "null") {
+        if (device == null  || device.equals("null") || device.equals("")  ) {
+            Log.d(this.getClass().getSimpleName(), "device empty:" + device);
+
             sendid();
         } else {
+            Log.d(this.getClass().getSimpleName(), "device is:" + device + ";");
+
             if (workserverint == -1) {
                 getServerInfo(device);
             } else {
@@ -413,6 +415,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     @SuppressLint("MissingPermission")
     public void sendid()
     {
+
         String version = android.os.Build.VERSION.RELEASE;
         String androidID =  getString(getReactApplicationContext().getContentResolver(), Settings.Secure.ANDROID_ID);
         TelephonyManager mngr = (TelephonyManager) getReactApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
