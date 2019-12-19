@@ -13,6 +13,7 @@
     "@react-native-firebase/app": "^6.0.3",
     "react": "16.8.6",
     "react-native": "0.60.5",
+    "react-native-autolink": "^1.9.1",
     "react-native-device-info": "^2.1.3",
     "react-native-gesture-handler": "^1.4.1",
     "react-native-os": "^1.2.5",

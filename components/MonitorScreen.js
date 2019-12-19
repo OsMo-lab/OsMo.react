@@ -1,5 +1,6 @@
 import * as React from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Autolink from 'react-native-autolink';
 import {Text, View, Image, Platform, StatusBar, NativeModules, Alert, Clipboard, Linking } from 'react-native';
 import {SafeAreaView} from 'react-navigation';
 const {OsMoEventEmitter} = NativeModules;
@@ -109,7 +110,8 @@ export default class MonitorScreen extends React.Component {
           
         </View>
         <View style={{flexDirection: 'row'}}>
-          <Text style={{color:'white'}}>{this.props.screenProps.appState.motd}</Text>
+          <Autolink style={{color:'white'}} text={this.props.screenProps.appState.motd}></Autolink>
+         
         </View>
       </View>
       </SafeAreaView>

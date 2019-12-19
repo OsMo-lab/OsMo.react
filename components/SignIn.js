@@ -115,7 +115,8 @@ export default class SignInScreen extends React.Component {
     if (this.state.newUser) {
         data = data  + "&nick=" + encodeURIComponent(this.state.nick);
     } 
-    
+    console.log("POST:"  + data);
+
     let options = {
         method: 'POST',
         headers: {
@@ -126,6 +127,7 @@ export default class SignInScreen extends React.Component {
     fetch(url,options)
       .then((response) => response.json())
       .then((responseJson) => {
+        console.log(responseJson);
         if (responseJson.auth) {
             this.props.screenProps.onUserAuthorize(responseJson.nick);
             this.props.navigation.pop();
