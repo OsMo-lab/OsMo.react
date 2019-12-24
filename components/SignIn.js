@@ -110,7 +110,7 @@ export default class SignInScreen extends React.Component {
             return;
         }
     }
-    
+
     var data = "key=" + encodeURIComponent(global.config.device) + "&email=" + encodeURIComponent(this.state.email) + "&password=" + encodeURIComponent(this.state.pass);
     if (this.state.newUser) {
         data = data  + "&nick=" + encodeURIComponent(this.state.nick);
