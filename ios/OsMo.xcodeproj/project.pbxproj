@@ -14,9 +14,8 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		140ED2AC1D01E1AD002B40FF /* libReact.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 146834041AC3E56700842450 /* libReact.a */; };
-		2229DBAEA56441C0853CE45B /* libRNDeviceInfo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8DAFF8EC695B4115AB722197 /* libRNDeviceInfo.a */; };
+		1D358A8328FB07BE492D20E5 /* libPods-osmo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C647C42BF0A7068780E710EF /* libPods-osmo.a */; };
 		2BCBADB3F4C14D55B7002CB4 /* Entypo.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 49B256810C404499BF780E3E /* Entypo.ttf */; };
-		2C369DCE415DE7748DB42BFC /* libPods-osmo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C647C42BF0A7068780E710EF /* libPods-osmo.a */; };
 		2D02E4BC1E0B4A80006451C7 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.m */; };
 		2D02E4BD1E0B4A84006451C7 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		2D02E4BF1E0B4AB3006451C7 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
@@ -30,7 +29,6 @@
 		2D16E6881FA4F8E400B85C8A /* libReact.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2D16E6891FA4F8E400B85C8A /* libReact.a */; };
 		2DCD954D1E0B4F2C00145EB5 /* OsMoTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* OsMoTests.m */; };
 		2DF0FFEE2056DD460020B375 /* libReact.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3DAD3EA31DF850E9000B6D8A /* libReact.a */; };
-		2FDA04E0FAFF43CDBFACCC4D /* libRNCAsyncStorage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F2518E04FE1D4874BC2689DF /* libRNCAsyncStorage.a */; };
 		3761CC685BEF4F059D42BC12 /* libRNVectorIcons-tvOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3BD5E0D12C2C4C989B011AD3 /* libRNVectorIcons-tvOS.a */; };
 		464A1A0CF6F44263888CFB52 /* FontAwesome5_Brands.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D36B52D073234F899BF98B6B /* FontAwesome5_Brands.ttf */; };
 		4D190C5922F7149100E3574E /* ConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D190C5822F7149100E3574E /* ConnectionManager.swift */; };
@@ -60,7 +58,6 @@
 		4D190C8922F758C600E3574E /* settings.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4D190C8822F758C600E3574E /* settings.plist */; };
 		4D87783B23032B6000F8C7BC /* OsMoEventEmitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D87783A23032B6000F8C7BC /* OsMoEventEmitter.swift */; };
 		4D88E6EA2386F1340024E944 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4D88E6E92386F1340024E944 /* GoogleService-Info.plist */; };
-		4DFD495D23ABCF160055F239 /* libdouble-conversion.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2DF0FFE72056DD460020B375 /* libdouble-conversion.a */; };
 		503B4A31E2CD4561ADF64E66 /* Fontisto.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 145C447EF5E048379382FB69 /* Fontisto.ttf */; };
 		522D8CED0A7643A4987EC056 /* MaterialIcons.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 92D050BAAF514D3BBA512B48 /* MaterialIcons.ttf */; };
 		5E45B9FD19678E043AA7B6D2 /* libPods-osmo-tvOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B6EE91DE7727DF9F316E2FB2 /* libPods-osmo-tvOS.a */; };
@@ -72,7 +69,6 @@
 		AF6FD582A39044669F23B3D8 /* Feather.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CC506042F6264402B9AD2AF5 /* Feather.ttf */; };
 		BF4F35DD6BF04C298B3729A6 /* Octicons.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8C28453B3CB9476FB1BADBE1 /* Octicons.ttf */; };
 		C56470ACEF4F4F33A9C330D2 /* AntDesign.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EA9DE9F40A4D465A82A9B087 /* AntDesign.ttf */; };
-		C92B477D4D1344C4B41822DE /* libRNVectorIcons.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C2209A01A0349D1993FE75A /* libRNVectorIcons.a */; };
 		CFF37AB1AE094E3AA2F7A646 /* EvilIcons.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 07419AE6D0C24B3EA0294C2C /* EvilIcons.ttf */; };
 		D595AE3448F445DCB4988D2E /* MaterialCommunityIcons.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3C4E9E514B07452E89603685 /* MaterialCommunityIcons.ttf */; };
 		E6283336F61B4CDBAA9BCC66 /* SimpleLineIcons.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 98C5111036F34EB3817A561E /* SimpleLineIcons.ttf */; };
@@ -502,12 +498,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4DFD495D23ABCF160055F239 /* libdouble-conversion.a in Frameworks */,
 				ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */,
-				2229DBAEA56441C0853CE45B /* libRNDeviceInfo.a in Frameworks */,
-				C92B477D4D1344C4B41822DE /* libRNVectorIcons.a in Frameworks */,
-				2FDA04E0FAFF43CDBFACCC4D /* libRNCAsyncStorage.a in Frameworks */,
-				2C369DCE415DE7748DB42BFC /* libPods-osmo.a in Frameworks */,
+				1D358A8328FB07BE492D20E5 /* libPods-osmo.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

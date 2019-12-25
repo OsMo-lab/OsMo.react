@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View, FlatList, Platform, StatusBar } from 'react-native';
+import { Text, View, FlatList, Platform, StatusBar, Image } from 'react-native';
 import FlatListItemSeparator from './FlatListSeparator';
 import {SafeAreaView} from 'react-navigation';
 
@@ -17,7 +17,18 @@ export default class HistoryScreen extends React.Component {
         <FlatList 
         ItemSeparatorComponent={FlatListItemSeparator}
         data={this.props.screenProps.appState.history}
-        renderItem={({item}) => <Text style={{height:150,color:'white'}}>{item.name}</Text>}
+        renderItem={({item}) => 
+          <View>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+            <Text style={{height:20,color:'white'}}>{item.name}</Text>
+            <Text style={{height:20,color:'white'}}>{item.end}</Text>
+            </View>
+            
+            
+            <Image
+            style={{width: 200, height: 200}}
+            source={{uri: item.image}}></Image>
+          </View>}
         keyExtractor={(item, index) => index.toString()}
         />
       </View> 
