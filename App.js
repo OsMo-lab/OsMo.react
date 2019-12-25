@@ -91,6 +91,7 @@ export default class App extends React.Component {
             },
             log: [],
             groups: [],
+            history:[],
             trackerId: '',
             userNick: 'unknown',
             motd: '',
@@ -104,8 +105,6 @@ export default class App extends React.Component {
 
     async componentDidMount() {
         await request_location_runtime_permission();
-        this.state.groups.push({ name: 'Group 1', uid: 1 });
-        this.state.groups.push({ name: 'Group 2', uid: 2 });
 
         const {OsMoEventEmitter} = NativeModules;
         
@@ -135,6 +134,7 @@ export default class App extends React.Component {
                         OsMoEventEmitter.configure(JSON.stringify(global.config));
                         if (resp.uid > 0) {
                             this.setState({userNick : resp.name});
+                            this.getGroups();
                         }
                         this.setState({permanent : resp.permanent});
                         if (this.state.motdtime < resp.motd) {
@@ -148,7 +148,6 @@ export default class App extends React.Component {
                         global.config.motd = command[1];
                         let st = Object.assign(this.state,{motd : global.config.motd});
                         this.storeData('motd', global.config.motd);
-                            
                         this.setState(st);
                         return;
                     }
@@ -174,7 +173,16 @@ export default class App extends React.Component {
                         this.setState({tracker:tracker});
                         return;
                     }
-                    
+                    if (command[0] == 'GROUP') {
+                        let resp = JSON.parse(command[1]);
+                        this.setState({groups:resp});
+                        return;
+                    }
+                    if (command[0] == 'HISTORY') {
+                        let resp = JSON.parse(command[1]);
+                        this.setState({history:resp});
+                        return;
+                    }
                 } else {
                     if (command[0] == 'PP') {
                         OsMoEventEmitter.sendMessage('P');
@@ -231,8 +239,11 @@ export default class App extends React.Component {
         let props = {
             appState: this.state,
             onResetAuthorization: () => this.onResetAuthorization(), 
+            onRequestHistory: () => this.onRequestHistory(), 
+            
         }; 
         props.onUserAuthorize = this.onUserAuthorize.bind(this); 
+        
         return <AppContainer screenProps = {props}/>;
     }
 
@@ -272,15 +283,30 @@ export default class App extends React.Component {
             }
         }
         let tracker = Object.assign(this.state.tracker,{state:'stop',id:''} );
-        this.setState({trackerId:'',motd:'', motdtime:0,userNick:'unknown',tracker:tracker});
+        this.setState({trackerId:'',motd:'', motdtime:0,userNick:'unknown',tracker:tracker,groups:[], history:[]});
         
         const {OsMoEventEmitter} = NativeModules;
         OsMoEventEmitter.configure(JSON.stringify(global.config));
         OsMoEventEmitter.connect();
     }
+
+    getGroups() {
+        const {OsMoEventEmitter} = NativeModules;
+        OsMoEventEmitter.sendMessage('GROUP');
+    }
+
+
+    onRequestHistory() {
+        const {OsMoEventEmitter} = NativeModules;
+        OsMoEventEmitter.sendMessage('HISTORY');
+    }
+
     onUserAuthorize(nick) {
         console.log(nick);
         this.setState({userNick:nick});
+        if(nick) {
+            this.getGroups();
+        }
     }
 
     onResetAuthorization() {
