@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-community/async-storage';
 import AccountScreen from './components/AccountScreen';
 import HistoryScreen from './components/HistoryScreen';
 import MonitorScreen from './components/MonitorScreen';
-import SettingsScreen from './components/SettingsScreen';
 import MapScreen from './components/MapScreen';
 import LogScreen from './components/LogScreen';
 import SignInScreen from './components/SignIn';
@@ -121,12 +120,31 @@ export default class App extends React.Component {
                 this.setState({address:resp.address});
                 return;
             }
+            //Сообщение о полученном новом device
+            if (res.newkey) {
+                this.storeData('device', res.newkey);
+                global.config.device = res.newkey;
+                OsMoEventEmitter.configure(JSON.stringify(global.config));
+                return;
+            }
+            //Ошибка при соединенеии
+            if (res.error) {
+                let resp = JSON.parse(res.error);
+                if (resp.error == 10 || resp.error == 100) {
+                    this.clearKeys();
+                }
+            }
             //Сообщение от сервера
             if (res.message) {
                 let command = res.message.split('|');
                 if (command.length == 2) {
                     if (command[0] == 'AUTH' ) {
                         let resp = JSON.parse(command[1]);
+                        //Ошибка при соединенеии
+                        if (resp.error == 10 || resp.error == 100) {
+                            this.clearKeys();
+                        }
+                    
                         this.storeData('trackerId', resp.id);
                         this.setState({trackerId: resp.id});
                         
@@ -142,6 +160,7 @@ export default class App extends React.Component {
                             this.setState({motdtime : resp.motd});
                             OsMoEventEmitter.getMessageOfTheDay();
                         }    
+                        
                         return;
                     }
                     if (command[0] == 'MD') {
@@ -192,20 +211,7 @@ export default class App extends React.Component {
             }
             
 
-            //Сообщение о полученном новом device
-            if (res.newkey) {
-                this.storeData('device', res.newkey);
-                global.config.device = res.newkey;
-                OsMoEventEmitter.configure(JSON.stringify(global.config));
-                return;
-            }
-            //Ошибка при соединенеии
-            if (res.error) {
-                let resp = JSON.parse(res.error);
-                if (resp.error == 10 || resp.error == 100) {
-                    this.clearKeys();
-                }
-            }
+            
         });  
         
 
@@ -240,10 +246,9 @@ export default class App extends React.Component {
             appState: this.state,
             onResetAuthorization: () => this.onResetAuthorization(), 
             onRequestHistory: () => this.onRequestHistory(), 
-            
         }; 
         props.onUserAuthorize = this.onUserAuthorize.bind(this); 
-        
+        props.onStateChanged = this.onStateChanged.bind(this); 
         return <AppContainer screenProps = {props}/>;
     }
 
@@ -308,11 +313,15 @@ export default class App extends React.Component {
             this.getGroups();
         }
     }
-
+    
     onResetAuthorization() {
         if (this.state.tracker.state == 'stop'){
             this.clearKeys();
         }
+    }
+
+    onStateChanged(new_state) {
+        this.setState({tracker:{state:new_state}});
     }
 }
 
@@ -343,11 +352,9 @@ const SinInStack = createStackNavigator(
 
 const AppNavigator = createBottomTabNavigator({
     Monitor: { screen: MonitorScreen },
-    //Account: { screen: AccountScreen },
     Account: { screen: SinInStack },
     Map: { screen: MapScreen },
     History: { screen: HistoryScreen },
-    Settings: { screen: SettingsScreen },
     Log: { screen: LogScreen },
 }, {
     navigationOptions:{

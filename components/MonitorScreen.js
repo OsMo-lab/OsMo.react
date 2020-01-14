@@ -6,13 +6,7 @@ import {SafeAreaView} from 'react-navigation';
 const {OsMoEventEmitter} = NativeModules;
   
 export default class MonitorScreen extends React.Component {
-  TrackerClick() {
-    if (this.props.screenProps.appState.tracker.state == 'stop'){
-      OsMoEventEmitter.startSendingCoordinates(false);
-    } else {
-      OsMoEventEmitter.stopSendingCoordinates();
-    }
-  }
+  
 
   TrackerUrlClick() {
     if (this.props.screenProps.appState.tracker.id!='') {
@@ -48,10 +42,22 @@ export default class MonitorScreen extends React.Component {
     
   }
 
+  TrackerClick() {
+    if (this.props.screenProps.appState.tracker.state == 'stop'){
+      this.props.screenProps.onStateChanged('run');
+      OsMoEventEmitter.startSendingCoordinates(false);
+    } else {
+      this.props.screenProps.onStateChanged('stop');
+      OsMoEventEmitter.stopSendingCoordinates();
+    }
+  }
+
   TrackerPauseClick() {
     if (this.props.screenProps.appState.tracker.state == 'run'){
+      this.props.screenProps.onStateChanged('pause');
       OsMoEventEmitter.pauseSendingCoordinates();
     } else {
+      this.props.screenProps.onStateChanged('run');
       OsMoEventEmitter.stopSendingCoordinates();
     }
   }

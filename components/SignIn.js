@@ -23,7 +23,7 @@ export default class SignInScreen extends React.Component {
             <Button style={{color:'dodgerblue',fontSize:20}}
                 onPress={() => this.RegisterClick()}
                 title={this.state.newUser ? 'Sign-In' : 'Register'}
-            ></Button> 
+            /> 
         </View>
         <View>
             <Text  style={{color:'#FB671E',fontSize:20}}>E-mail</Text> 

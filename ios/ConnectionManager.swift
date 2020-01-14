@@ -1135,7 +1135,7 @@ class ConnectionManager: NSObject{
         return (1, "error message is not parsed")
       }
     } else {
-      if Int(responce.components(separatedBy: "|").last!)! > 0 {
+      if Int(responce.components(separatedBy: "|").last ?? "") ?? 0 > 0 {
         return (0, "")
       }
     }
