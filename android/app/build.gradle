@@ -137,8 +137,8 @@ android {
         applicationId "com.osmo"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "2.0"
+        versionCode 5
+        versionName "1.0"
     }
     splits {
         abi {
@@ -151,6 +151,7 @@ android {
     buildTypes {
         debug {
              signingConfig signingConfigs.debug
+            applicationIdSuffix ".debug"
         }
 
         release {

@@ -88,8 +88,4 @@ class OsMoEventEmitter: RCTEventEmitter{
   @objc open func pauseSendingCoordinates () {
     sendingManger.pauseSendingCoordinates()
   }
-  
-  @objc open func getMessageOfTheDay() {
-    connectionManager.getMessageOfTheDay()
-  }
 }

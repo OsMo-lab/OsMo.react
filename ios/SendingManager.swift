@@ -139,11 +139,11 @@ class SendingManager: NSObject{
             log.enqueue("Sending Manager: start Sending")
             self.lcSendTimer?.invalidate()
             self.lcSendTimer = nil
-            var sendTime:TimeInterval = 4;
+            var sendTime:TimeInterval = 1;
             if let sT = SettingsManager.getKey(SettingKeys.sendTime) {
                 sendTime  = sT.doubleValue
-                if sendTime < 4 {
-                    sendTime = 4;
+                if sendTime < 0 {
+                    sendTime = 0;
                 }
             
             }

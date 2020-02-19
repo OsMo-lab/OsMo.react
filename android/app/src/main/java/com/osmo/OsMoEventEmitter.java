@@ -2,6 +2,7 @@ package com.osmo;
 
 import com.osmo.Netutil.MyAsyncTask;
 
+import android.app.AlarmManager;
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -30,6 +31,9 @@ import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
+import android.widget.ArrayAdapter;
+
+import androidx.core.app.NotificationCompat;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.NativeModule;
@@ -98,6 +102,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     private static final int MIN_UPLOAD_ID = 4;
     private static final int MAX_UPLOAD_ID = 1000;
     private static int RECONNECT_TIMEOUT = 1000 * 30;
+    private static final long ONLINE_TIMEOUT = 60 * 1000;
+    private static final long ERROR_RECONNECT_TIMEOUT = 3 * 1000;
+
     private static JSONObject settings = new JSONObject();
 
 
@@ -105,6 +112,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     //Network
     private MyAsyncTask sendidtask;
+    AlarmManager manager;
     volatile private boolean checkadressing = false;
     static long startTraffic = 0;
     int socketRetryInt = 0;
@@ -131,11 +139,15 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     private IMWriter iMWriter;
     private IMReader iMReader;
+    private IMAlerter iMAlerter;
+
     private Thread readerThread;
     private Thread writerThread;
+    private Thread alerterThread;
 
     private Intent in;
     String sendresult = "";
+    final public static int mesnotifyid = 2;
 
 
     final static DecimalFormatSymbols dot = new DecimalFormatSymbols();
@@ -229,6 +241,17 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     private int lcounter = 0;
     private int scounter = 0;
     protected static boolean uploadto = false;
+    private long reconnecttime = 0;
+    private long timeonline = SystemClock.uptimeMillis();
+    public static Device currentDevice;
+    PendingIntent reconnectPIntent;
+    private static final String RECONNECT_INTENT = "com.osmo.mobi.reconnect";
+    private static final String ONLINE_TIMEOUT_INTENT = "com.osmo.mobi.onlinetimeout";
+    public static ArrayList<String> messagelist = new ArrayList<String>();
+    public static ArrayAdapter<String> notificationStringsAdapter;
+
+
+
 
     TextToSpeech tts;
 
@@ -260,6 +283,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         super(reactContext);
         this.mReactContext = reactContext;
         this.myManager =  (LocationManager) reactContext.getSystemService(Context.LOCATION_SERVICE);
+        this.manager = (AlarmManager) (reactContext.getSystemService(Context.ALARM_SERVICE));
         currentLocation = new Location("");
         prevlocation = new Location("");
         prevlocation_gpx = new Location("");
@@ -313,11 +337,18 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
         running = true;
         connecting = true;
+        reconnectPIntent = PendingIntent.getBroadcast(this.mReactContext, 0, new Intent(RECONNECT_INTENT), 0);
+
+        iMAlerter = new IMAlerter();
         iMReader = new IMReader();
         iMWriter = new IMWriter();
+
         connectThread = new Thread(new IMConnect(), "connecter");
         readerThread = new Thread(iMReader, "reader");
         writerThread = new Thread(iMWriter, "writer");
+        alerterThread = new Thread(iMAlerter, "alerter");
+
+        alerterThread.start();
         writerThread.start();
 
         connectThread.setPriority(Thread.MIN_PRIORITY);
@@ -340,14 +371,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         }
         return;
     }
-
-    @ReactMethod
-    public void getMessageOfTheDay() {
-        sendToServer("MD", false);
-
-        return;
-    }
-
 
     @ReactMethod
     public void startSendingCoordinates(Boolean once) {
@@ -460,6 +483,53 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         else
         {
             return MIN_UPLOAD_ID;
+        }
+    }
+
+    synchronized public void setReconnectAlarm(final boolean fast) {
+        //if (log) {
+            Log.d(this.getClass().getName(), "void setReconnectAlarm fast=" + fast);
+        //}
+        iMAlerter.handler.post(new Runnable() {
+            @Override
+            public void run() {
+                //LocalService.addlog("Socket setReconnectAlarm fast=" + fast);
+            }
+        });
+        //parent.registerReceiver(reconnectReceiver, new IntentFilter(RECONNECT_INTENT));
+        //manager.cancel(reconnectPIntent);
+        if (reconnecttime == 0) {
+            reconnecttime = SystemClock.uptimeMillis();
+            //addlog("Set reconnecttime=" + reconnecttime);
+        } else {
+            //addlog("Set reconnecttime no executed because recconecttime already set =" + reconnecttime);
+        }
+        if (fast) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                manager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + ERROR_RECONNECT_TIMEOUT, reconnectPIntent);
+            } else {
+                manager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + ERROR_RECONNECT_TIMEOUT, reconnectPIntent);
+            }
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                manager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + RECONNECT_TIMEOUT, reconnectPIntent);
+            } else {
+                manager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + RECONNECT_TIMEOUT, reconnectPIntent);
+            }
+
+        }
+        checkalarmindozemode();
+
+    }
+
+    void checkalarmindozemode() {
+        //addlog("reconencttime=" + reconnecttime + " SystemClockUptime=" + SystemClock.uptimeMillis());
+        if (reconnecttime != 0 && SystemClock.uptimeMillis() > reconnecttime + RECONNECT_TIMEOUT) {
+            reconnecttime=0;
+            //LocalService.addlog("stuck in doze mode - do recconect ");
+            manager.cancel(reconnectPIntent);
+            this.mReactContext.sendBroadcast(new Intent(RECONNECT_INTENT));
+
         }
     }
 
@@ -978,10 +1048,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             //LocalService.addlog("We still have GPS");
             return;
         }
-        else
-        {
-            //LocalService.addlog("We still have GPS -ELSE");
-        }
+
         if (System.currentTimeMillis() > lastgpslocationtime + pollperiod + 30000 && location.getProvider().equals(LocationManager.NETWORK_PROVIDER))
         {
             Log.d(this.getClass().getName(), "У нас уже нет GPS");
@@ -992,15 +1059,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 sendlocation(location,false);
                 return;
             }
-            else
-            {
-                //LocalService.addlog("send on because networklocation - ELSE");
-            }
         }
-        else
-        {
-            //LocalService.addlog("Lost GPS till - ELSE");
-        }
+
         if (firstsend)
         {
             Log.d(this.getClass().getName(), "Первая отправка");
@@ -1122,28 +1182,19 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
             //}
         }
-        //if(log)Log.d(this.getClass().getName(),"workmilli="+ Float.toString(workmilli)+" gettime="+location.getTime());
-        //if(log)Log.d(this.getClass().getName(),"diff="+ Float.toString(location.getTime()-workmilli));
         if ((System.currentTimeMillis() - workmilli) > 0)
         {
             avgspeed = workdistance / (System.currentTimeMillis() - workmilli);
             //if(log)Log.d(this.getClass().getName(),"avgspeed="+ Float.toString(avgspeed));
         }
-        //if(log)Log.d(this.getClass().getName(), df0.format(location.getSpeed()*3.6).toString());
-        //if(log)Log.d(this.getClass().getName(), df0.format(prevlocation.getSpeed()*3.6).toString());
 
         if (settings.optBoolean("ttsspeed",false) && settings.optBoolean("usetts",false) && tts != null && !tts.isSpeaking() && !(df0.format(location.getSpeed() * 3.6).toString()).equals(lastsay))
         {
-            //if(log)Log.d(this.getClass().getName(), df0.format(location.getSpeed()*3.6).toString());
-            //if(log)Log.d(this.getClass().getName(), df0.format(prevlocation.getSpeed()*3.6).toString());
             tts.speak(df0.format(location.getSpeed() * 3.6), TextToSpeech.QUEUE_ADD, null);
             lastsay = df0.format(location.getSpeed() * 3.6).toString();
         }
 
         position = (df6.format(location.getLatitude()) + ", " + df6.format(location.getLongitude()) + "\nСкорость:" + df1.format(location.getSpeed() * 3.6)) + " Км/ч";
-        //position = ( String.format("%.6f", location.getLatitude())+", "+String.format("%.6f", location.getLongitude())+" = "+String.format("%.1f", location.getSpeed()));
-        //if (location.getTime()>lastfix+3000)notifygps(false);
-        //if (location.getTime()<lastfix+3000)notifygps(true);
         timeperiod = System.currentTimeMillis() - workmilli;
 
 
@@ -1203,14 +1254,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 }
             }
             Log.d(this.getClass().getName(), "sessionstarted=" + sessionstarted);
-            //LocalService.addlog("Session started="+sessionstarted);
             if (live)
             {
-                //LocalService.addlog("live and session satrted");
                 if (bearing > 0) {
-                    //LocalService.addlog("bearing>0");
-                    //if(log)Log.d(this.getClass().getName(), "Попали в проверку курса для отправки");
-                    //if(log)Log.d(this.getClass().getName(), "Accuracey"+location.getAccuracy()+"hdop"+hdop);
                     double lon1 = location.getLongitude();
                     double lon2 = prevlocation.getLongitude();
                     double lat1 = location.getLatitude();
@@ -1219,7 +1265,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     double y = Math.sin(dLon) * Math.cos(lat2);
                     double x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
                     brng = Math.toDegrees(Math.atan2(y, x)); //.toDeg();
-                    //position = position + "\n" + getString(R.string.SendCourseChange) + df1.format(abs(brng - prevbrng));
                     refresh();
 
 
@@ -1231,10 +1276,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                         //if(log)Log.d(this.getClass().getName(), "send(location)="+location);
                         sendlocation(location,true);
                     }
-                    else
-                    {
-                        //LocalService.addlog("not modeAND and accuracy and speed - ELSE");
-                    }
+
 
                 }
                 else
@@ -1250,10 +1292,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                         //if(log)Log.d(this.getClass().getName(), "send(location)="+location);
                         sendlocation(location,true);
                     }
-                    else
-                    {
-                        //LocalService.addlog("modeAND and accuracy and speed - ELSE");
-                    }
                 }
             }
             else
@@ -1261,10 +1299,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 Log.d(this.getClass().getName(), " not !hash.equals() && live&&sessionstarted");
                 //LocalService.addlog("live and session satrted - ELSE");
             }
-        }
-        else
-        {
-            //LocalService.addlog("Provider=GPS - ELSE");
         }
     }
     public void onStatusChanged(String provider, int status, Bundle extras)
@@ -1544,7 +1578,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             if (icon != -1)
             {
                 foregroundnotificationBuilder.setSmallIcon(icon);
-                foregroundnotificationBuilder.setColor(Color.parseColor("#FFA500"));
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    foregroundnotificationBuilder.setColor(Color.parseColor("#FFA500"));
+                }
             }
             mNotificationManager.notify(OSMODROID_ID, foregroundnotificationBuilder.build());
         }
@@ -1587,7 +1623,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         @Override
         public void run()
         {
-
             //Log.d(this.getClass().getName(), " RUN IWriter");
             Looper.prepare();
             handler = new Handler()
@@ -1595,60 +1630,60 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 @Override
                 public void handleMessage(Message msg)
                 {
-                    Bundle b = msg.getData();
-                    if (running)
+                Bundle b = msg.getData();
+                if (running)
+                {
+                    if (socket != null && socket.isConnected() && wr != null)
                     {
-                        if (socket != null && socket.isConnected() && wr != null)
+                        if (!b.getBoolean("pp"))
                         {
-                            if (!b.getBoolean("pp"))
-                            {
-                                //setReconnectAlarm(false);
-                            }
-                            try
-                            {
-                                Thread.sleep(0);
-                            }
-                            catch (InterruptedException e)
-                            {
-                                //writeException(e);
-                                e.printStackTrace();
-                            }
-                            wr.println(b.getString("write"));
-                            error = wr.checkError();
-                            /*
-                            if (log)
-                            {
-                                Log.d(this.getClass().getName(), "Write " + b.getString("write") + " error=" + error);
-                            }
-                            LocalService.addlog("SocketWrite " + b.getString("write") + " error=" + error);
-
-                             */
-                            if (error)
-                            {
-                                if (running)
-                                {
-                                    Log.d(this.getClass().getName(), "set recconect in error in writer");
-                                    setReconnectOnError();
-                                }
-                                //Looper.myLooper().quit();
-                            }
-                            else
-                            {
-                                sendBytes = sendBytes + b.getString("write").getBytes().length;
-                            }
+                            setReconnectAlarm(false);
                         }
-                    }
-                    else
-                    {
+                        try
+                        {
+                            Thread.sleep(0);
+                        }
+                        catch (InterruptedException e)
+                        {
+                            //writeException(e);
+                            e.printStackTrace();
+                        }
+                        wr.println(b.getString("write"));
+                        error = wr.checkError();
                         /*
-                        LocalService.addlog("not connected now");
-                        if (OsMoDroid.gpslocalserviceclientVisible)
+                        if (log)
                         {
-                            Toast.makeText(localService, localService.getString(R.string.CheckInternet), Toast.LENGTH_SHORT).show();
+                            Log.d(this.getClass().getName(), "Write " + b.getString("write") + " error=" + error);
                         }
-                        */
+                        LocalService.addlog("SocketWrite " + b.getString("write") + " error=" + error);
+
+                         */
+                        if (error)
+                        {
+                            if (running)
+                            {
+                                Log.d(this.getClass().getName(), "set recconect in error in writer");
+                                setReconnectOnError();
+                            }
+                            //Looper.myLooper().quit();
+                        }
+                        else
+                        {
+                            sendBytes = sendBytes + b.getString("write").getBytes().length;
+                        }
                     }
-                    super.handleMessage(msg);
+                }
+                else
+                {
+                    /*
+                    LocalService.addlog("not connected now");
+                    if (OsMoDroid.gpslocalserviceclientVisible)
+                    {
+                        Toast.makeText(localService, localService.getString(R.string.CheckInternet), Toast.LENGTH_SHORT).show();
+                    }
+                    */
+                }
+                super.handleMessage(msg);
                 }
             };
             Looper.loop();
@@ -1716,6 +1751,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                             }
                             LocalService.addlog("inputstream c=-1 ");
                             */
+                            Log.d(this.getClass().getName(), "set recconect in error in reader");
                             setReconnectOnError();
                             break;
                         }
@@ -1799,6 +1835,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     }
 
 
+
     private class IMConnect implements Runnable
     {
         @Override
@@ -1817,7 +1854,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 socket = new Socket();
 
                 socket.connect(sockAddr, RECONNECT_TIMEOUT);
-                //setReconnectAlarm(false);
+                setReconnectAlarm(false);
                 TrustManager[] trustAllCerts = new TrustManager[]{
                         new X509TrustManager()
                         {
@@ -1894,7 +1931,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     workserverint=-1;
                 }
 
-                if (socketRetryInt > 3 && !settings.optBoolean("understand"/*, false*/)&&!warnedsocketconnecterror)
+                if (socketRetryInt > 3 && !settings.optBoolean("understand", false)&&!warnedsocketconnecterror)
                 {
                     warnedsocketconnecterror=true;
                     //localService.notifywarnactivity(localService.getString(R.string.checkfirewall), false, OsMoDroid.NOTIFY_NO_CONNECT);
@@ -1904,5 +1941,261 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     }
 
 
+    public class IMAlerter implements Runnable
+    {
+        public Handler handler;
+        boolean error = false;
+        @Override
+        public void run()
+        {
+            //Log.d(this.getClass().getName(), " RUN IWriter");
+            Looper.prepare();
+            handler = new Handler()
+            {
+                @Override
+                public void handleMessage(Message message)
+                {
+                    if (log)
+                    {
+                        Log.d(this.getClass().getName(), "Handle message " + message.toString());
+                    }
+                    Bundle b = message.getData();
+                    if (log)
+                    {
+                        Log.d(this.getClass().getName(), "deviceU " + b.getInt("deviceU"));
+                    }
+                    if (b.containsKey("read"))
+                    {
+                        String str = "";
+                        str = b.getString("read");
+                        if (str.substring(str.length() - 1, str.length()).equals("\n"))
+                        {
+                            str = str.substring(0, str.length() - 1);
+                            try
+                            {
+                                parseEx(new String(str),false);
+                            }
+                            catch (Exception e)
+                            {
+                                e.printStackTrace();
+                        /* OSMO.MOBI
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsString = sw.toString();
+                        LocalService.addlog(exceptionAsString);
+                        */
 
+                            }
+                        }
+                        else
+                        {
+                            try
+                            {
+                                parseEx(new String(str),false);
+                            }
+                            catch (Exception e)
+                            {
+
+                                e.printStackTrace();
+                        /* OSMO.MOBI
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsString = sw.toString();
+                        LocalService.addlog(exceptionAsString);
+
+                         */
+                            }
+                        }
+                        return;
+                    }
+
+                    if (b.containsKey("deviceU") && currentDevice != null && currentDevice.u == (b.getInt("deviceU")))
+                    {
+                        mNotificationManager.cancel(mesnotifyid);
+                    }
+                    String text = "";
+                    if (b.containsKey("MessageText"))
+                    {
+                        text = b.getString("MessageText");
+                    }
+                    if (b.containsKey("om_online") && b.getBoolean("om_online", false))
+                    {
+                    }
+                    if (text != null && !text.equals(""))
+                    {
+                        // Toast.makeText(serContext, text, Toast.LENGTH_SHORT).show();
+                        messagelist.add(0, text);
+
+
+                        if(notificationStringsAdapter !=null)
+                        {
+                            notificationStringsAdapter.clear();
+                            for (String s:messagelist)
+                            {
+                                notificationStringsAdapter.add(s);
+                            }
+                            notificationStringsAdapter.notifyDataSetChanged();
+                        }
+
+                        Bundle a = new Bundle();
+                        a.putStringArrayList("meslist", messagelist);
+
+                        Intent activ = new Intent(mReactContext, MainActivity.class);
+                        activ.setAction("notif");
+                        activ.putExtras(a);
+                        PendingIntent contentIntent = PendingIntent.getActivity(mReactContext, notifyidApp(), activ, 0);
+
+                        Long when = System.currentTimeMillis();
+                        numberofnotif++;
+                        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(
+                                mReactContext.getApplicationContext(),"default")
+                                .setWhen(when)
+                                .setContentText(text)
+                                .setContentTitle("Osmo.Mobi")
+                                .setSmallIcon(android.R.drawable.ic_menu_send)
+                                .setAutoCancel(true)
+                                .setDefaults(Notification.DEFAULT_LIGHTS)
+                                .setContentIntent(contentIntent).setNumber(numberofnotif).setChannelId("silent");
+                        if (!settings.optBoolean("silentnotify", false))
+                        {
+                            notificationBuilder.setDefaults(Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE | Notification.DEFAULT_SOUND).setChannelId("noisy");
+                        }
+                        Notification notification = notificationBuilder.build();
+
+                        mNotificationManager.notify(mesnotifyid, notification);
+
+
+                        /* Osmo.mobi
+                        if (OsMoDroid.mesactivityVisible)
+                        {
+                            try
+                            {
+                                contentIntent.send(serContext, 0, activ);
+                                LocalService.mNotificationManager.cancel(mesnotifyid);
+                            }
+                            catch (CanceledException e)
+                            {
+                                if (log)
+                                {
+                                    Log.d(this.getClass().getName(), "pending intent exception" + e);
+                                }
+                                e.printStackTrace();
+                            }
+                        }
+                         */
+                    }
+
+                    super.handleMessage(message);
+                }
+            };
+            Looper.loop();
+        }
+    }
+
+    static int numberofnotif=0;
+    private static int notifyid = 1;
+    public static int notifyidApp()
+    {
+        return notifyid++;
+    }
+
+
+    synchronized void parseEx(String toParse, boolean gcm) throws JSONException {
+        if (SystemClock.uptimeMillis() > timeonline + ONLINE_TIMEOUT) {
+            this.mReactContext.sendBroadcast(new Intent(ONLINE_TIMEOUT_INTENT));
+        }
+
+        //LocalService.addlog("recieve " + toParse);
+        if (log) {
+            Log.d(this.getClass().getName(), "recive " + toParse);
+        }
+
+
+        if (toParse.equals("P|")) {
+            //LocalService.addlog("recieve pong");
+            return;
+        }
+        JSONObject jsonObject;
+        JSONObject jo = new JSONObject();
+        JSONArray ja = new JSONArray();
+        String command = "";
+        String param = "";
+        String addict = "";
+        try {
+            command = toParse.substring(0, toParse.indexOf('|'));
+        } catch (Exception e1) {
+            command = toParse;
+        }
+        if (command.indexOf(':') != -1) {
+            param = command.substring(command.indexOf(':') + 1);
+            command = command.substring(0, command.indexOf(':'));
+        }
+        if (toParse.contains("|")) {
+            addict = toParse.substring(toParse.indexOf('|') + 1);
+        }
+
+        try {
+            jo = new JSONObject(addict);
+        } catch (JSONException e) {
+            try {
+                if (log) {
+                    Log.d(this.getClass().getName(), "не JSONO ");
+                }
+                ja = new JSONArray(addict);
+            } catch (JSONException e1) {
+                // TODO Auto-generated catch block
+                if (log) {
+                    Log.d(this.getClass().getName(), "не JSONA ");
+                }
+            }
+        }
+        if (!gcm) {
+            parseremovefromcommandlist(command, param);
+        }
+
+        if (jo.has("error")) {
+            /* Osmo.Mobi
+            if (OsMoDroid.gpslocalserviceclientVisible) {
+                final String str = jo.optString("error") + ' ' + jo.optString("error_description");
+                Toast.makeText(this.mReactContext, str, Toast.LENGTH_LONG).show();
+            }
+
+             */
+        }
+
+
+        // Osmo.Mobi parsedata(jo, ja, command, param, addict, gcm);
+
+
+    }
+
+    private void parseremovefromcommandlist(String command, String param) {
+        if (!running) {
+            running = true;
+        }
+        Iterator<String> comIter = executedCommandArryaList.iterator();
+        while (comIter.hasNext()) {
+            String str = comIter.next();
+            if (log) {
+                Log.d(this.getClass().getName(), "ExecutedListItem: " + str);
+            }
+            if (str.equals(command + ':' + param) || str.equals(command)) {
+                comIter.remove();
+                if (log) {
+                    Log.d(this.getClass().getName(), "ExecutedListItem removed: " + str);
+                }
+                //LocalService.addlog("ExecutedListItem removed: " + str);
+            }
+        }
+        if (log) {
+            Log.d(this.getClass().getName(), "ExecuteList=" + executedCommandArryaList.toString());
+        }
+        //LocalService.addlog("ExecuteList=" + executedCommandArryaList.toString());
+        if (executedCommandArryaList.size() == 0) {
+            //LocalService.addlog("Cancel reconnect alarm - no commands in order");
+            manager.cancel(reconnectPIntent);
+            reconnecttime = 0;
+            refresh();
+        }
+    }
 }

@@ -53,13 +53,17 @@ export async function request_location_runtime_permission() {
         'message': 'OsMo.Mobi App needs access to your location '
       }
     )
-    /*
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      Alert.alert("Location Permission Granted.");
+    
+    if (granted === PermissionsAndroid.RESULTS.GRANTED && PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION)  {
+        PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+            {
+              'title': 'OsMo.mobi Background Location Permission',
+              'message': 'OsMo.Mobi App needs access to track your location while in background'
+            }
+        )
+      
     }
-    else {
-      Alert.alert("Location Permission Not Granted");
-    }*/
   } catch (err) {
     console.warn(err)
   }
@@ -111,7 +115,7 @@ export default class App extends React.Component {
        
         onMessageReceived = this.eventEmitter.addListener("onMessageReceived",
         res => {
-            console.log(res);
+            //console.log(res);
             this.state.log.push({message:JSON.stringify(res)});
             //Получены TCP координаты сервера 
             if (res.server) {
@@ -158,7 +162,7 @@ export default class App extends React.Component {
                         if (this.state.motdtime < resp.motd) {
                             this.storeData('motdtime', String(resp.motd));
                             this.setState({motdtime : resp.motd});
-                            OsMoEventEmitter.getMessageOfTheDay();
+                            OsMoEventEmitter.sendMessage("MD");
                         }    
                         
                         return;

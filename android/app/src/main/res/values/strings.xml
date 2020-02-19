@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">OsMo</string>
+    <string name="app_name">OsMo.mobi</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="serviceStatus">State:</string>

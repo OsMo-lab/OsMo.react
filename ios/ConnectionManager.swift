@@ -562,11 +562,6 @@ class ConnectionManager: NSObject{
     }
   }
   
-  @objc open func getMessageOfTheDay(){
-    let request = "\(Tags.messageDay.rawValue)"
-    send(request: request)
-  }
-  
   open func getHistory(){
     let request = "\(Tags.history.rawValue)"
     send(request: request)
@@ -669,13 +664,6 @@ class ConnectionManager: NSObject{
               self.permanent = true;
             }
             
-          }
-          if let motd = parseTag(output, key: Keys.motd) {
-            let cur_motd = SettingsManager.getKey(SettingKeys.motdtime) as String? ?? "0"
-            if (Int(motd)! > Int(cur_motd)!) {
-              SettingsManager.setKey(motd as NSString, forKey: SettingKeys.motdtime)
-              self.getMessageOfTheDay()
-            }
           }
           
           if (answer == 10 || answer == 100) {
