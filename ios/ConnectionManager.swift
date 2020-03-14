@@ -18,7 +18,6 @@ class ConnectionManager: NSObject{
   var settings : NSDictionary = [:] ;
   
   private let bgController = ConnectionHelper()
-  //@objc let emitter = OsMoEventEmitter.sharedOsMoEventEmitte//r
   let onMessageReceived = ObserverSet<(String)>()
   let onAuthReceived = ObserverSet<(String)>()
   let onServerInfoReceived = ObserverSet<(String)>()
@@ -27,9 +26,7 @@ class ConnectionManager: NSObject{
   
   var onGroupListUpdated: ObserverSetEntry<[Group]>?
   var onMessageListUpdated: ObserverSetEntry<(Int)>?
-  //var onGroupCreated: ObserverSetEntry<(Int, String)>?
   
-  // add name of group in return
   let groupEntered = ObserverSet<(Int, String)>()
   let groupCreated = ObserverSet<(Int, String)>()
   let groupLeft = ObserverSet<(Int, String)>()
@@ -448,14 +445,16 @@ class ConnectionManager: NSObject{
     send(request: request)
   }
   
-  open func sendCoordinates(_ coordinates: [LocationModel])
+  open func sendCoordinates(_ coordinates: [LocationModel]) -> (String)
   {
     if self.sessionOpened {
       self.coordinates += coordinates
-      self.sendNextCoordinates()
-      
+      return self.sendNextCoordinates()
+    } else {
+      return ""
     }
   }
+  
   open func sendRemoteCommandResponse(_ rc: String) {
     let request = "\(Tags.remoteCommandResponse.rawValue)\(rc)|1"
     send(request: request)
@@ -666,26 +665,19 @@ class ConnectionManager: NSObject{
             
           }
           
-          if (answer == 10 || answer == 100) {
-            DispatchQueue.main.async {
-              SettingsManager.clearKeys()
-              self.connection.closeConnection()
-              self.connect()
-            }
+          
+          if (!self.connected) {
+            self.shouldReConnect = false
           } else {
-            if (!self.connected) {
-              self.shouldReConnect = false
-            } else {
-              for request in self.delayedRequests {
-                self.send(request: request)
-              }
-              self.delayedRequests = []
+            for request in self.delayedRequests {
+              self.send(request: request)
             }
-            if let trackerId = self.TrackerID {
-              SettingsManager.setKey(trackerId as NSString, forKey: SettingKeys.trackerId)
-            }
-            connectionRun.notify((answer, name))
+            self.delayedRequests = []
           }
+          if let trackerId = self.TrackerID {
+            SettingsManager.setKey(trackerId as NSString, forKey: SettingKeys.trackerId)
+          }
+          connectionRun.notify((answer, name))
         } else {
           connectionRun.notify((answer, name))
         }
@@ -1042,7 +1034,7 @@ class ConnectionManager: NSObject{
     self.sendNextCoordinates()
   }
   
-  fileprivate func sendNextCoordinates(){
+  fileprivate func sendNextCoordinates() -> (String){
     /*
      if self.shouldCloseSession {
      
@@ -1052,8 +1044,9 @@ class ConnectionManager: NSObject{
     
     //TODO: refactoring send best coordinates
     let cnt = self.coordinates.count;
+    var req = ""
     if self.sessionOpened && cnt > 0 {
-      var req = ""
+      
       var sep = ""
       var idx = 0;
       if cnt > 1 {
@@ -1077,6 +1070,7 @@ class ConnectionManager: NSObject{
       }
       send(request:req)
     }
+    return req;
   }
   
   fileprivate func parseCoordinate(_ group: Int, coordinates: Any) -> [UserGroupCoordinate]? {

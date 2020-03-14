@@ -41,7 +41,28 @@ class OsMoEventEmitter: RCTEventEmitter{
         self.sendEvent(withName: "onMessageReceived", body: ["server": $0])
       }
     }
+    
+     _ = sendingManger.sentObservers.add{
+      if (hasListeners) {
+        let data : NSDictionary =  ["speed": $0.0 * 3.6, "distance": $0.1];
+        let location : NSDictionary =  ["command": "", "data": data];
+        
+        do{
+            let json = try JSONSerialization.data(withJSONObject: location, options: JSONSerialization.WritingOptions(rawValue: 0))
+            
+            if let jsonString = NSString(data: json, encoding: String.Encoding.utf8.rawValue) {
+              self.sendEvent(withName: "onMessageReceived", body: ["location": jsonString])
+            }
+        }catch {
+            print("error generating location message")
+        }
+        
+        //
+      }
+    }
   }
+  
+  
   
   override func supportedEvents() -> [String]! {
     return ["onMessageReceived"]
@@ -58,6 +79,7 @@ class OsMoEventEmitter: RCTEventEmitter{
   override func stopObserving() {
     hasListeners = false
   }
+  
   @objc func configure(_ config: String){
     if let data: Data = config.data(using: .utf8) {
       do {
@@ -87,5 +109,8 @@ class OsMoEventEmitter: RCTEventEmitter{
 
   @objc open func pauseSendingCoordinates () {
     sendingManger.pauseSendingCoordinates()
+  }
+  
+  @objc func processLocation(_ location: String){
   }
 }

@@ -13,7 +13,7 @@ import UIKit
 
 class SendingManager: NSObject{
     //used lib
-    let sentObservers = ObserverSet<LocationModel>()
+    let sentObservers = ObserverSet<(Double, Double, String)>() //Speed, Distance, Sended coordinates command
     
     fileprivate let connectionManager = ConnectionManager.sharedConnectionManager
     public let locationTracker = LocationTracker()
@@ -113,22 +113,21 @@ class SendingManager: NSObject{
         //MUST REFACTOR
         if (connectionManager.sessionOpened || connectionManager.isGettingLocation)  && connectionManager.connected {
             let coors: [LocationModel] = locationTracker.getLastLocations()
+          
             log.enqueue("SendingManager: got \(coors.count) coordinates")
             
             if coors.count > 0 {
+              var sended = "";
                 log.enqueue("SendingManager: sending \(coors.count) coordinates")
                 if connectionManager.isGettingLocation {
                     self.connectionManager.sendCoordinate(coors[0])
                 }
                 if connectionManager.sessionOpened {
-                    self.connectionManager.sendCoordinates(coors)
+                    sended = self.connectionManager.sendCoordinates(coors)
                 }
-                
-                for c in coors {
-                    //notify about all - because it draw on map
-                    self.sentObservers.notify(c)
-                }
-                
+
+              self.sentObservers.notify((coors.last!.speed, locationTracker.distance, sended))
+              
            }
         }
     }

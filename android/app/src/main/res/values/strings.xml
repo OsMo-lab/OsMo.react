@@ -54,7 +54,7 @@
     <string name="message">Message</string>
     <string name="sendsupport">Report to support</string>
     <string name="about">About</string>
-    <string name="abouttext">OsMoDroid - is the official app OsMo service for Android. Using a smartphone and service OsMo your friends and family will always know where you are.\nMain developer: Denis Fokin (c) 2012-2017\n\nBy using this application, you accept the terms of use at https://osmo.mobi/terms\n\nSite OsMoDroid: http://osmodroid.mobi\n\nCopyright information: http://osmodroid.mobi/copyright.html</string>
+    <string name="abouttext">OsMo.mobi - is the official app OsMo service for Android. Using a smartphone and service OsMo your friends and family will always know where you are.\nMain developer: Alexey Sirotkin (c) 2020\n\nBy using this application, you accept the terms of use at https://osmo.mobi/terms\n\nSite OsMo.mobi: http://osmodroid.mobi\n\nCopyright information: http://osmodroid.mobi/copyright.html</string>
     <string name="send">>></string>
     <string name="cancel">Cancel</string>
     <string name="speed">Speed: km/h</string>
@@ -91,7 +91,7 @@
     <string name="writemessage">Write message</string>
     <string name="messages">Messages</string>
     <string name="binddevice">Bind device</string>
-    <string name="esya_ru_notrespond">OsMoDroid can\'t access the server</string>
+    <string name="esya_ru_notrespond">OsMo.mobi can\'t access the server</string>
     <string name="tracker">Tracker</string>
     <string name="links">Links</string>
     <string name="tracks">Tracks</string>
@@ -124,14 +124,14 @@
     <string name="monitoringstarted">Monitoring started</string>
     <string name="monitoringactive">Monitoring is active</string>
     <string name="tracktoshort">The track is too short, the file will not be saved</string>
-    <string name="osmodroiduploadfile">OsMoDroid File upload</string>
+    <string name="osmodroiduploadfile">OsMo.mobi File upload</string>
     <string name="commansendlocation">Command: Sending position </string>
     <string name="letsgo">Lets go!</string>
     <string name="comand">Command: </string>
     <string name="errorcode"> Error code: </string>
     <string name="detalisation"> Explanation: </string>
     <string name="query">Query: </string>
-    <string name="versionosmodroid">OsMoDroid version:</string>
+    <string name="versionosmodroid">OsMo.mobi version:</string>
     <string name="dayssend">shipments per day:</string>
     <string name="monthsends">shipments per month:</string>
     <string name="exit">Exit</string>
@@ -209,7 +209,7 @@
     <string name="empty_devices">On this screen will be a list of devices from groups like "Family". Action devices are available in the context menu.</string>
     <string name="empty_links">On this screen has a permanent reference for monitoring your device from the site. Available actions can be found in the context menu.</string>
     <string name="understand">OK, Do not report bad connections more</string>
-    <string name="checkfirewall">Could not connect to tracker server by it port. Check what you allow OsMoDroid full access in you firewall. Also it could because bad data connection quality.</string>
+    <string name="checkfirewall">Could not connect to tracker server by it port. Check what you allow OsMo.mobi full access in you firewall. Also it could because bad data connection quality.</string>
     <string name="size_of_point">Scale objects</string>
     <string name="follow_">"Follow "</string>
     <string name="no_follow_">"No Follow "</string>
@@ -231,7 +231,7 @@
     <string name="if_checked_all_conditions_speed_time_distance_must_be_met_to_send_a_location_update_if_unchecked_any_condition_may_cause_an_update_">If checked, ALL conditions (speed, time, distance) must be met to send a location update. If unchecked, any condition may cause an update.</string>
     <string name="transfer_unsent">Transfer unsent</string>
     <string name="useful_with_unstable_internet_connections_may_use_more_data_">Useful with unstable Internet connections. May use more data.</string>
-    <string name="recorded_tracks_are_stored_on_the_memory_card_by_default_sdcard_osmodroid_">Recorded tracks are stored on the memory card (by default /sdcard/OsMoDroid/)</string>
+    <string name="recorded_tracks_are_stored_on_the_memory_card_by_default_sdcard_osmodroid_">Recorded tracks are stored on the memory card (by default /sdcard/OsMo.mobi/)</string>
     <string name="record_track">Record track</string>
     <string name="record_settings">Record settings</string>
     <string name="milliseconds_how_often_to_save_location">Milliseconds - How often to save location</string>

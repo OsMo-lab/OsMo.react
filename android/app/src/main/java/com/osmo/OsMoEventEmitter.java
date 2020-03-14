@@ -7,6 +7,7 @@ import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -18,9 +19,11 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.TrafficStats;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
@@ -84,7 +87,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import static android.provider.Settings.System.getString;
-import static androidx.core.content.ContextCompat.getSystemService;
 import static com.osmo.Netutil.SHA1;
 import static java.lang.StrictMath.abs;
 import static org.osmdroid.util.GeometryMath.DEG2RAD;
@@ -93,11 +95,11 @@ import static org.osmdroid.util.constants.GeoConstants.RADIUS_EARTH_METERS;
 
 public class OsMoEventEmitter extends ReactContextBaseJavaModule implements ResultsListener, LocationListener, GpsStatus.Listener{
 
-    private ReactContext mReactContext;
+    public ReactContext mReactContext;
 
     static NotificationManager mNotificationManager;
 
-    static final int OSMODROID_ID = 1;
+    static final int OSMOMOBI_ID = 1;
     public static Device mydev = new Device();
     private static final int MIN_UPLOAD_ID = 4;
     private static final int MAX_UPLOAD_ID = 1000;
@@ -105,7 +107,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     private static final long ONLINE_TIMEOUT = 60 * 1000;
     private static final long ERROR_RECONNECT_TIMEOUT = 3 * 1000;
 
-    private static JSONObject settings = new JSONObject();
+    public static JSONObject settings = new JSONObject();
 
 
     static int uploadnotifyid = MIN_UPLOAD_ID;
@@ -123,6 +125,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public SSLSocket sslsocket;
     volatile public boolean authed = false;
     volatile protected boolean running = false;
+    volatile protected boolean start = false;
     volatile protected boolean connOpened = false;
     volatile protected boolean connecting = false;
     volatile public boolean needopensession = false;
@@ -144,20 +147,26 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     private Thread readerThread;
     private Thread writerThread;
     private Thread alerterThread;
+    private final IBinder mBinder = new LocalBinder();
 
     private Intent in;
     String sendresult = "";
     final public static int mesnotifyid = 2;
+    final public static int warnnotifyid = 3;
+    public static boolean mesactivityVisible = false;
 
 
     final static DecimalFormatSymbols dot = new DecimalFormatSymbols();
     final static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     final static SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     final static SimpleDateFormat sdf2 = new SimpleDateFormat("yyyyMMddHHmmss");
+    final static SimpleDateFormat sdf3 = new SimpleDateFormat("HH:mm:ss");
     final static DecimalFormat df1 = new DecimalFormat("#######0.0" , DecimalFormatSymbols.getInstance(Locale.ENGLISH));
     final static DecimalFormat df2 = new DecimalFormat("#######0.00", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
     final static DecimalFormat df0 = new DecimalFormat("########", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
     final static DecimalFormat df6 = new DecimalFormat("########.######", DecimalFormatSymbols.getInstance(Locale.ENGLISH));
+
+    public static final String WHERE = "12";
 
     private boolean warnedsocketconnecterror = false;
 
@@ -251,7 +260,13 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public static ArrayAdapter<String> notificationStringsAdapter;
 
 
+    public static boolean gpslocalserviceclientVisible = false;
+    public static String currentItemName = "";
 
+    public static final int NOTIFY_ERROR_SENDID = 0;
+    public static final int NOTIFY_NO_DEVICE = 1;
+    public static final int NOTIFY_EXPIRY_USER = 2;
+    public static final int NOTIFY_NO_CONNECT = 3;
 
     TextToSpeech tts;
 
@@ -270,6 +285,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     Builder foregroundnotificationBuilder;
     boolean pro;
 
+    LocalService localService = new LocalService();
 
 
     @Nonnull
@@ -282,12 +298,25 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
         super(reactContext);
         this.mReactContext = reactContext;
-        this.myManager =  (LocationManager) reactContext.getSystemService(Context.LOCATION_SERVICE);
-        this.manager = (AlarmManager) (reactContext.getSystemService(Context.ALARM_SERVICE));
+        //this.myManager =  (LocationManager) reactContext.getSystemService(Context.LOCATION_SERVICE);
+        if (reactContext!=null) {
+            this.manager = (AlarmManager) (reactContext.getSystemService(Context.ALARM_SERVICE));
+        }
         currentLocation = new Location("");
         prevlocation = new Location("");
         prevlocation_gpx = new Location("");
+
     }
+
+    public class LocalBroadcastReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String someData = intent.getStringExtra("my-extra-data");
+            mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                    .emit("JS-Event", someData);
+        }
+    }
+
 
     private void sendEvent(ReactContext reactContext,
                            String eventName,
@@ -299,6 +328,11 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 .emit(eventName, params);
     }
 
+
+    @ReactMethod
+    public void processLocation(String location) {
+        this.sendToServer(location,false);
+    }
 
     @ReactMethod
     public void configure(String config) {
@@ -333,6 +367,31 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     @ReactMethod
     public void connect() {
+        start();
+    }
+
+    @ReactMethod
+    public void startSendingCoordinates(Boolean once) {
+        this.startServiceWork(true);
+        return;
+    }
+
+    @ReactMethod
+    public void stopSendingCoordinates() {
+        this.stopServiceWork(true);
+
+        return;
+    }
+
+    @ReactMethod
+    public void pauseSendingCoordinates() {
+
+        return;
+
+    }
+
+
+    public void start() {
         String device = settings.optString("device");
 
         running = true;
@@ -370,28 +429,20 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
         }
         return;
-    }
-
-    @ReactMethod
-    public void startSendingCoordinates(Boolean once) {
-        this.startServiceWork(true);
-        return;
-    }
-
-    @ReactMethod
-    public void stopSendingCoordinates() {
-        this.stopServiceWork(true);
-        return;
-    }
-
-    @ReactMethod
-    public void pauseSendingCoordinates() {
-
-        return;
 
     }
 
+    public void close() {
 
+    }
+
+    public class LocalBinder extends Binder
+    {
+        OsMoEventEmitter getService()
+        {
+            return OsMoEventEmitter.this;
+        }
+    }
 
     private void getServerInfo(String device) {
 
@@ -670,6 +721,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         }
         //addlog("onGpsStatusChanged "+count1+" "+countFix1);
     }
+
     public void startServiceWork(boolean opensession)
     {
         if (!paused)
@@ -702,14 +754,14 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             sended = true;
             sending = "";
 
-            boolean crtfile = false;
+
             if (gpx)
             {
                 openGPX();
             }
         }
         //setPause(false);
-        requestLocationUpdates(this);
+        //localService.requestLocationUpdates(this);
         /*
         int icon = R.drawable.eye;
         CharSequence tickerText = getString(R.string.monitoringstarted); //getString(R.string.Working);
@@ -721,7 +773,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         foregroundnotificationBuilder = new NotificationCompat.Builder(this,"default");
         foregroundnotificationBuilder.setWhen(System.currentTimeMillis());
         foregroundnotificationBuilder.setContentText(tickerText);
-        foregroundnotificationBuilder.setContentTitle("OsMoDroid");
+        foregroundnotificationBuilder.setContentTitle("OsMo.mobi");
         foregroundnotificationBuilder.setSmallIcon(icon);
         foregroundnotificationBuilder.setContentIntent(osmodroidLaunchIntent);
         foregroundnotificationBuilder.setChannelId("silent");
@@ -733,7 +785,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         foregroundnotificationBuilder.addAction(android.R.drawable.ic_delete, getString(R.string.stop_monitoring), stop);
         Notification notification = foregroundnotificationBuilder.build();
         //notification = new Notification(icon, tickerText, when);
-        //notification.setLatestEventInfo(getApplicationContext(), "OsMoDroid", getString(R.string.monitoringactive), osmodroidLaunchIntent);
+        //notification.setLatestEventInfo(getApplicationContext(), "OsMo.mobi", getString(R.string.monitoringactive), osmodroidLaunchIntent);
         startForeground(1, notification);
         */
         setstarted(true);
@@ -757,14 +809,17 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 }
             }
         }
+        this.mReactContext.startService(new Intent(this.mReactContext, LocalService.class));
+
         /*
-        if (tts != null && OsMoDroid.settings.getBoolean("usetts", false))
+        if (tts != null && settings.getBoolean("usetts", false))
         {
             tts.speak(getString(R.string.letsgo), TextToSpeech.QUEUE_ADD, null);
         }
         */
     }
 
+    /*
     public void requestLocationUpdates(LocationListener locationListener, String source, int interval) throws SecurityException
     {
         List<String> list = myManager.getAllProviders();
@@ -813,24 +868,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             }
         }
 
-        /*
-        if (settings.optBoolean("usenetwork",true))
-        {
-            if (list.contains(LocationManager.NETWORK_PROVIDER))
-            {
-                try {
-                    myManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, pollperiod, 0, locationListener);
-                } catch (SecurityException e) {
-                    e.printStackTrace();
-                }
-            }
-            else
-            {
-                Log.d(this.getClass().getName(), "NETWORK провайдер не обнаружен");
-            }
-        }
-        */
     }
+    */
     private void setstarted(boolean started)
     {
         state = started;
@@ -852,7 +891,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             else
             {
                 /*
-                SharedPreferences.Editor editor = OsMoDroid.settings.edit();
+                SharedPreferences.Editor editor = settings.edit();
                 editor.putString("sdpath", sdDir.getPath());
                 editor.commit();
 
@@ -860,15 +899,15 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             }
             // SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
             String time = sdf2.format(new Date());
-            fileName = new File(sdDir, "OsMoDroid/");
+            fileName = new File(sdDir, "OsMo.mobi/");
             fileName.mkdirs();
             if (settings.optString("gpxname").equals(""))
             {
-                fileName = new File(sdDir, "OsMoDroid/" + time + ".gpx");
+                fileName = new File(sdDir, "OsMo.mobi/" + time + ".gpx");
             }
             else
             {
-                fileName = new File(sdDir, "OsMoDroid/" + settings.optString("gpxname"));
+                fileName = new File(sdDir, "OsMo.mobi/" + settings.optString("gpxname"));
                 fileheaderok = true;
             }
 
@@ -879,8 +918,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 try
                 {
                     crtfile = fileName.createNewFile();
-                    OsMoDroid.editor.putString("gpxname", fileName.getName());
-                    OsMoDroid.editor.commit();
+                    OsMo Droid.editor.putString("gpxname", fileName.getName());
+                    OsMo Droid.editor.commit();
 
                 }
                 catch (IOException e)
@@ -895,7 +934,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     time = sdf1.format(new Date(System.currentTimeMillis())) + "Z";
                     FileWriter trackwr = new FileWriter(fileName);
                     trackwr.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-                    trackwr.write("<gpx xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"1.1\" xmlns=\"http://www.topografix.com/GPX/1/1\" creator=\"OsMoDroid\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">");
+                    trackwr.write("<gpx xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"1.1\" xmlns=\"http://www.topografix.com/GPX/1/1\" creator=\"OsMo.mobi\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">");
                     trackwr.write("<time>" + time + "</time>");
                     trackwr.write("<trk>");
                     trackwr.write("<name>" + time + "</name>");
@@ -919,27 +958,26 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public void stopServiceWork(Boolean stopsession)
     {
         /*
-        OsMoDroid.mFirebaseAnalytics.logEvent("STOP_TRIP",null);
-        OsMoDroid.editor.putFloat("lat", (float) currentLocation.getLatitude());
-        OsMoDroid.editor.putFloat("lon", (float) currentLocation.getLongitude());
-        OsMoDroid.editor.commit();
+        OsMo Droid.mFirebaseAnalytics.logEvent("STOP_TRIP",null);
+        OsMo Droid.editor.putFloat("lat", (float) currentLocation.getLatitude());
+        OsMo Droid.editor.putFloat("lon", (float) currentLocation.getLongitude());
+        OsMo Droid.editor.commit();
         */
         firstgpsbeepedon = false;
 
 /*
-        if (OsMoDroid.settings.getBoolean("playsound", false))
+        if (settings.getBoolean("playsound", false))
         {
-            if (tts != null && OsMoDroid.settings.getBoolean("usetts", false))
+            if (tts != null && settings.getBoolean("usetts", false))
             {
                 tts.speak(getString(R.string.monitoring_stopped), TextToSpeech.QUEUE_ADD, null);
             }
         }
   */
+        this.mReactContext.stopService(new Intent(this.mReactContext, LocalService.class));
+
         if (live && stopsession)
         {
-            //String[] params = {"http://a.t.esya.ru/?act=session_stop&hash="+OsMoDroid.settings.getString("hash", "")+"&n="+OsMoDroid.settings.getString("n", ""),"false","","session_stop"};
-            //APIcomParams params = new APIcomParams("http://a.t.esya.ru/?act=session_stop&hash="+OsMoDroid.settings.getString("hash", "")+"&n="+OsMoDroid.settings.getString("n", "")+"&ttl="+OsMoDroid.settings.getString("session_ttl", "30"),null,"session_stop");
-            //new Netutil.MyAsyncTask(this).execute(params);
             if (authed)
             {
                 if (sendingbuffer.size() == 0 && buffer.size() != 0)
@@ -957,7 +995,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 needclosesession = true;
                 needopensession = false;
             }
-            //buffer.clear();
+
         }
         if (gpx && fileheaderok && stopsession)
         {
@@ -968,8 +1006,6 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             myManager.removeUpdates(this);
         }
         setstarted(false);
-        //stopForeground(true);
-        //updatewidgets();
     }
     /**
      *
@@ -993,8 +1029,8 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             //Toast.makeText(LocalService.this, getString(R.string.CanNotWriteEnd), Toast.LENGTH_SHORT).show();
         }
         /*
-        OsMoDroid.editor.remove("gpxname");
-        OsMoDroid.editor.commit();
+        OsMo Droid.editor.remove("gpxname");
+        OsMo Droid.editor.commit();
 
          */
         if (fileName.length() > 1024 && uploadto)
@@ -1301,6 +1337,11 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             }
         }
     }
+
+    void ondisconnect()
+    {
+    }
+
     public void onStatusChanged(String provider, int status, Bundle extras)
     {
             Log.d(this.getClass().getName(), "Изменился статус провайдера:" + provider + " статус:" + status + " Бандл:" + extras.getInt("satellites"));
@@ -1375,7 +1416,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         }
         else
         {
-            //addlog(Boolean.toString(myIM==null)+Boolean.toString(!authed)+Boolean.toString(OsMoDroid.settings.getBoolean("sendsms",false)));
+            //addlog(Boolean.toString(myIM==null)+Boolean.toString(!authed)+Boolean.toString(settings.getBoolean("sendsms",false)));
         }
     }
 
@@ -1582,7 +1623,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                     foregroundnotificationBuilder.setColor(Color.parseColor("#FFA500"));
                 }
             }
-            mNotificationManager.notify(OSMODROID_ID, foregroundnotificationBuilder.build());
+            mNotificationManager.notify(OSMOMOBI_ID, foregroundnotificationBuilder.build());
         }
     }
 
@@ -1677,7 +1718,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 {
                     /*
                     LocalService.addlog("not connected now");
-                    if (OsMoDroid.gpslocalserviceclientVisible)
+                    if (OsMo Droid.gpslocalserviceclientVisible)
                     {
                         Toast.makeText(localService, localService.getString(R.string.CheckInternet), Toast.LENGTH_SHORT).show();
                     }
@@ -1934,7 +1975,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                 if (socketRetryInt > 3 && !settings.optBoolean("understand", false)&&!warnedsocketconnecterror)
                 {
                     warnedsocketconnecterror=true;
-                    //localService.notifywarnactivity(localService.getString(R.string.checkfirewall), false, OsMoDroid.NOTIFY_NO_CONNECT);
+                    //localService.notifywarnactivity(localService.getString(R.string.checkfirewall), false, NOTIFY_NO_CONNECT);
                 }
             }
         }
@@ -1944,11 +1985,10 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     public class IMAlerter implements Runnable
     {
         public Handler handler;
-        boolean error = false;
+
         @Override
         public void run()
         {
-            //Log.d(this.getClass().getName(), " RUN IWriter");
             Looper.prepare();
             handler = new Handler()
             {
@@ -1960,10 +2000,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
                         Log.d(this.getClass().getName(), "Handle message " + message.toString());
                     }
                     Bundle b = message.getData();
-                    if (log)
-                    {
-                        Log.d(this.getClass().getName(), "deviceU " + b.getInt("deviceU"));
-                    }
+
                     if (b.containsKey("read"))
                     {
                         String str = "";
@@ -2066,7 +2103,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
 
                         /* Osmo.mobi
-                        if (OsMoDroid.mesactivityVisible)
+                        if (OsMo Droid.mesactivityVisible)
                         {
                             try
                             {
@@ -2155,7 +2192,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
         if (jo.has("error")) {
             /* Osmo.Mobi
-            if (OsMoDroid.gpslocalserviceclientVisible) {
+            if (gpslocalserviceclientVisible) {
                 final String str = jo.optString("error") + ' ' + jo.optString("error_description");
                 Toast.makeText(this.mReactContext, str, Toast.LENGTH_LONG).show();
             }

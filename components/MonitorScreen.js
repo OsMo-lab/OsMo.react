@@ -46,6 +46,8 @@ export default class MonitorScreen extends React.Component {
     if (this.props.screenProps.appState.tracker.state == 'stop'){
       this.props.screenProps.onStateChanged('run');
       OsMoEventEmitter.startSendingCoordinates(false);
+      
+      
     } else {
       this.props.screenProps.onStateChanged('stop');
       OsMoEventEmitter.stopSendingCoordinates();
@@ -92,7 +94,7 @@ export default class MonitorScreen extends React.Component {
           <Text style={{justifyContent: 'center',color:'white', fontSize:18}}>Time</Text>
         </View>
         <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
-          <Text style={{justifyContent: 'center',color:'white',fontSize:32}}>{this.props.screenProps.appState.tracker.time}</Text>
+    <Text style={{justifyContent: 'center',color:'white',fontSize:32}}>{parseInt(this.props.screenProps.appState.tracker.time / (60 * 60))} : {parseInt((this.props.screenProps.appState.tracker.time % (60 * 60)) / 60)} : {parseInt((this.props.screenProps.appState.tracker.time % (60 * 60)) % 60)}</Text>
         </View>
            
         <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>

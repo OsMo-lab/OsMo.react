@@ -39,8 +39,9 @@ class IconWithBadge extends React.Component {
                      </View >
                 )
             } </View>
-    );
-}
+        );
+    }
+
 }
 
 export async function request_location_runtime_permission() {
@@ -85,12 +86,14 @@ export default class App extends React.Component {
         this.state = {
             isLoading: true,
             address:'',
+            timer:null,
             tracker: {
                 distance: 0,
                 speed: 0,
                 time: 0,
                 state: 'stop',
                 id: '',
+                start: 0,
             },
             log: [],
             groups: [],
@@ -112,10 +115,28 @@ export default class App extends React.Component {
         const {OsMoEventEmitter} = NativeModules;
         
         this.eventEmitter = new NativeEventEmitter(OsMoEventEmitter);
+        
        
         onMessageReceived = this.eventEmitter.addListener("onMessageReceived",
         res => {
-            //console.log(res);
+            if (res.location) {
+                let resp = JSON.parse(res.location);
+                if (resp.command) {
+                    OsMoEventEmitter.processLocation(resp.command);
+                }
+                if (resp.data) {
+                    console.log(resp.data);
+                    let tracker = this.state.tracker;
+                    if (resp.data.distance) {
+                        tracker.distance = resp.data.distance.toFixed(2);
+                    }
+                    if (resp.data.speed) {
+                        tracker.speed = resp.data.speed.toFixed(2);
+                    }
+                    this.setState({tracker:tracker});
+                }
+                return;
+            }
             this.state.log.push({message:JSON.stringify(res)});
             //Получены TCP координаты сервера 
             if (res.server) {
@@ -138,6 +159,7 @@ export default class App extends React.Component {
                     this.clearKeys();
                 }
             }
+            
             //Сообщение от сервера
             if (res.message) {
                 let command = res.message.split('|');
@@ -176,14 +198,14 @@ export default class App extends React.Component {
                     }
 
                     if (command[0] == 'TO') {
-                        global.config.sessionStarted = true;
-                        OsMoEventEmitter.configure(JSON.stringify(global.config));
                         let resp = JSON.parse(command[1]);
                         if (resp.error) {
                             OsMoEventEmitter.sendMessage('PUSH|bla-bla-bla');
-
                         } else {
-                            this.setState({tracker:{state:'run',id:resp.url, distance:0,time:0,speed:0}});
+                            global.config.sessionStarted = true;
+                            OsMoEventEmitter.configure(JSON.stringify(global.config));
+                            this.setState({tracker:{state:'run',id:resp.url, distance:0,time:0,speed:0, start:Date.now()}});
+                            //OsMoEventEmitter.startService();
                         }
                         return;
                     }
@@ -192,7 +214,9 @@ export default class App extends React.Component {
                         OsMoEventEmitter.configure(JSON.stringify(global.config));
                         
                         let resp = JSON.parse(command[1]);
-                        let tracker = Object.assign(this.state.tracker,{state:'stop',id:''} );
+                        let tracker = this.state.tracker;
+                        tracker.state = 'stop';
+                        tracker.id='';
                         this.setState({tracker:tracker});
                         return;
                     }
@@ -242,6 +266,9 @@ export default class App extends React.Component {
     }
 
     componentWillUnmount() {
+        if (this.state.timer) {
+            clearInterval(this.state.timer);
+        }
         this.eventEmitter.remove();
     }
 
@@ -254,6 +281,12 @@ export default class App extends React.Component {
         props.onUserAuthorize = this.onUserAuthorize.bind(this); 
         props.onStateChanged = this.onStateChanged.bind(this); 
         return <AppContainer screenProps = {props}/>;
+    }
+
+    tick =() => {
+        let tracker = this.state.tracker;
+        tracker.time = (Date.now() - tracker.start) / 1000;
+        this.setState({tracker:tracker});
     }
 
     async storeData (name,value){
@@ -291,7 +324,12 @@ export default class App extends React.Component {
               // remove error
             }
         }
-        let tracker = Object.assign(this.state.tracker,{state:'stop',id:''} );
+        let tracker = this.state.tracker;
+        tracker.state = 'stop';
+        tracker.id='';
+        tracker.speed = 0;
+        tracker.time = 0;
+        tracker.distance = 0;
         this.setState({trackerId:'',motd:'', motdtime:0,userNick:'unknown',tracker:tracker,groups:[], history:[]});
         
         const {OsMoEventEmitter} = NativeModules;
@@ -325,7 +363,17 @@ export default class App extends React.Component {
     }
 
     onStateChanged(new_state) {
-        this.setState({tracker:{state:new_state}});
+        let tracker = this.state.tracker;
+        tracker.state = new_state;
+        var timer = null;
+        if (new_state == 'run') {
+            timer = setInterval(this.tick, 1000);
+            this.setState({timer});
+        } else {
+            clearInterval(this.state.timer);
+        } 
+
+        this.setState({tracker:tracker, timer:timer});
     }
 }
 
