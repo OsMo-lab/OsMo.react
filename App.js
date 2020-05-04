@@ -76,7 +76,8 @@ export default class App extends React.Component {
             authUrl: "https://api2.osmo.mobi/new?", // register new device
             servUrl:"https://api2.osmo.mobi/serv?", // to get server info
             apiUrl:"https://api2.osmo.mobi/iProx?", // send requests in background mode for iOS
-            OsmoAppKey:Platform.OS === 'ios' ? "j4C32_f2bvK" : "dSA3dS-cF2Cj45",
+            OsmoAppKey:"Jdf43G_fVl3Opa42",
+            //OsmoAppKey:Platform.OS === 'ios' ? "j4C32_f2bvK" : "dSA3dS-cF2Cj45",
             device:"",
             motd:"Welcome to OsMo",
             authed:false,
@@ -162,7 +163,8 @@ export default class App extends React.Component {
             
             //Сообщение от сервера
             if (res.message) {
-                let command = res.message.split('|');
+
+                let command = res.message.replace("\n","").split('|');
                 if (command.length == 2) {
                     if (command[0] == 'AUTH' ) {
                         let resp = JSON.parse(command[1]);
@@ -235,13 +237,21 @@ export default class App extends React.Component {
                         OsMoEventEmitter.sendMessage('P');
                         return;
                     }
+                    if (command[0] == 'RC:12') { //WHERE
+                        OsMoEventEmitter.startSendingCoordinates(true);
+                    }
+                    if (command[0] == 'RC:85') {//CHANGE_MOTD_TEXT
+                        OsMoEventEmitter.sendMessage("MD");
+                    }
+                    if (command[0] == 'RC:92') { //REFRESH_GROUPS
+                        OsMoEventEmitter.sendMessage("GROUP");
+                    }
                 } 
             }
             
 
             
         });  
-        
 
         /*
         AsyncStorage.getItem('trackerId', (err, result) => {
@@ -258,6 +268,7 @@ export default class App extends React.Component {
             this.setState({motd: result});
         });
         AsyncStorage.getItem('device', (err, result) => {
+            console.log('device from config:' + result);
             global.config.device = result;
             OsMoEventEmitter.configure(JSON.stringify(global.config));
             OsMoEventEmitter.connect()

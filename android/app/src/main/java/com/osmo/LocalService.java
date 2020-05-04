@@ -204,7 +204,7 @@ public class LocalService extends Service implements LocationListener, GpsStatus
         private String gpxbuffer = new String();
         private String satellite = "";
         private String accuracy = "";
-        private boolean usebuffer = false;
+        private boolean usebuffer = true;
         private boolean usewake = false;
         static NotificationManager mNotificationManager;
         private String lastsendforbuffer = "First";
@@ -1137,7 +1137,7 @@ public class LocalService extends Service implements LocationListener, GpsStatus
                 bearing_gpx = Integer.parseInt(OsMoEventEmitter.settings.optString("bearing_gpx", "0").equals("") ? "0" : OsMoEventEmitter.settings.optString("bearing", "0"));
                 hdop_gpx = Integer.parseInt(OsMoEventEmitter.settings.optString("hdop_gpx", "30").equals("") ? "30" : OsMoEventEmitter.settings.optString("hdop_gpx", "30"));
                 speed_gpx = Integer.parseInt(OsMoEventEmitter.settings.optString("speed_gpx", "3").equals("") ? "3" : OsMoEventEmitter.settings.optString("speed_gpx", "3"));
-                usebuffer = OsMoEventEmitter.settings.optBoolean("usebuffer", false);
+                usebuffer = OsMoEventEmitter.settings.optBoolean("usebuffer", true);
                 usewake = OsMoEventEmitter.settings.optBoolean("usewake", false);
                 notifyperiod = Integer.parseInt(OsMoEventEmitter.settings.optString("notifyperiod", "30000").equals("") ? "30000" : OsMoEventEmitter.settings.optString("notifyperiod", "30000"));
                 sendsound = OsMoEventEmitter.settings.optBoolean("sendsound", false);
@@ -2372,7 +2372,7 @@ public class LocalService extends Service implements LocationListener, GpsStatus
         private void sendlocation(Location location, boolean gps)
             {
                 sessionstarted = OsMoEventEmitter.settings.optBoolean("sessionStarted",false);
-                LocalService.addlog("void sendlocation");
+                //LocalService.addlog("void sendlocation");
                 if (log)
                     {
                         Log.d(this.getClass().getName(), "void sendlocation");

@@ -93,7 +93,7 @@ import static org.osmdroid.util.GeometryMath.DEG2RAD;
 import static org.osmdroid.util.constants.GeoConstants.RADIUS_EARTH_METERS;
 
 
-public class OsMoEventEmitter extends ReactContextBaseJavaModule implements ResultsListener, LocationListener, GpsStatus.Listener{
+public class OsMoEventEmitter extends ReactContextBaseJavaModule implements ResultsListener{
 
     public ReactContext mReactContext;
 
@@ -138,6 +138,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     long connectcount = 0;
     long erorconenctcount = 0;
+    private boolean onlinebybcr = false;
     ArrayList<String> executedCommandArryaList = new ArrayList<String>();
 
     private IMWriter iMWriter;
@@ -171,7 +172,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     private boolean warnedsocketconnecterror = false;
 
     //Location vars
-    public static LocationManager myManager;
+    //public static LocationManager myManager;
 
     long sessionopentime;
     Boolean state = false;
@@ -253,7 +254,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     private long reconnecttime = 0;
     private long timeonline = SystemClock.uptimeMillis();
     public static Device currentDevice;
+    PendingIntent getTokenTimeoutPIntent;
     PendingIntent reconnectPIntent;
+    PendingIntent keepAlivePIntent;
     private static final String RECONNECT_INTENT = "com.osmo.mobi.reconnect";
     private static final String ONLINE_TIMEOUT_INTENT = "com.osmo.mobi.onlinetimeout";
     public static ArrayList<String> messagelist = new ArrayList<String>();
@@ -372,7 +375,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
     @ReactMethod
     public void startSendingCoordinates(Boolean once) {
-        this.startServiceWork(true);
+        this.startServiceWork(!once);
         return;
     }
 
@@ -604,6 +607,20 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         connOpened = false;
 
         running = false;
+        iMAlerter.handler.post(new Runnable() {
+            @Override
+            public void run() {
+                ondisconnect();
+            }
+        });
+        iMAlerter.handler.post(new Runnable() {
+            @Override
+            public void run() {
+                setReconnectAlarm(true);
+            }
+        });
+        refresh();
+
     }
     @Override
     public void onResultsSucceeded(APIComResult result)
@@ -675,52 +692,69 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
     }
 
 
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-
-    }
-
-    public void onGpsStatusChanged(int event)
-    {
-        int MaxPrn = 0;
-        int count1 = 0;
-        int countFix1 = 0;
-        boolean hasA = false;
-        boolean hasE = false;
-        try {
-            GpsStatus xGpsStatus = myManager.getGpsStatus(null);
-            Iterable<GpsSatellite> iSatellites = xGpsStatus.getSatellites();
-            Iterator<GpsSatellite> it = iSatellites.iterator();
-            while (it.hasNext())
-            {
-                GpsSatellite oSat = (GpsSatellite) it.next();
-                count1 = count1 + 1;
-                hasA = oSat.hasAlmanac();
-                hasE = oSat.hasEphemeris();
-                if (oSat.usedInFix())
-                {
-                    countFix1 = countFix1 + 1;
-                    if (oSat.getPrn() > MaxPrn)
-                    {
-                        MaxPrn = oSat.getPrn();
-                    }
-                    //Log.e("A fost folosit ", "int fix!");
-                }
+    BroadcastReceiver reconnectReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (SystemClock.uptimeMillis() > timeonline + ONLINE_TIMEOUT) {
+                localService.sendBroadcast(new Intent(ONLINE_TIMEOUT_INTENT));
             }
-            //satellite = getString(R.string.Sputniki) + count + ":" + countFix; //+" ("+hasA+"-"+hasE+")";
-            count = count1;
-            countFix = countFix1;
-            refresh();
-        } catch (SecurityException e) {
-            e.printStackTrace();
+            LocalService.addlog("Socket reconnect receiver trigged onlinebybcr=" + onlinebybcr);
+
+            disablekeepAliveAlarm();
+            stop();
+            localService.internetnotify(false);
+            localService.refresh();
+            start();
+
+
+            //context.unregisterReceiver(this);
         }
-        //addlog("onGpsStatusChanged "+count1+" "+countFix1);
+    };
+
+    public void disablekeepAliveAlarm() {
+        if (log) {
+            Log.d(this.getClass().getName(), "void disableKeepAliveAlarm");
+        }
+        LocalService.addlog("Socket void disablekeepalive");
+        manager.cancel(keepAlivePIntent);
     }
+
+    void stop() {
+        if (log) {
+            Log.d(this.getClass().getName(), "void IM.stop");
+        }
+        LocalService.addlog("Socket void stop");
+        executedCommandArryaList.clear();
+        running = false;
+        connOpened = false;
+        authed = false;
+        connecting = false;
+        localService.addlog("set connectcompleted=false");
+        LocalService.connectcompleted = false;
+        /*Osmo.Mobi
+        localService.alertHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                ondisconnect();
+            }
+        });
+
+         */
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                LocalService.addlog("exeption close socket " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        manager.cancel(getTokenTimeoutPIntent);
+        manager.cancel(reconnectPIntent);
+
+        localService.refresh();
+    }
+
+
 
     public void startServiceWork(boolean opensession)
     {
@@ -1001,10 +1035,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         {
             closeGPX();
         }
-        if (myManager != null)
-        {
-            myManager.removeUpdates(this);
-        }
+
         setstarted(false);
     }
     /**
@@ -1058,9 +1089,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         Notification notification = notificationBuilder.build();
         int uploadid = uploadnotifyid();
         mNotificationManager.notify(uploadid, notification);
-        //Netutil.newapicommand((ResultsListener) this, "tr_track_upload:1", file, notificationBuilder, uploadid);
     }
 
+    /*
     public void onLocationChanged(Location location)
     {
 
@@ -1070,13 +1101,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             myManager.removeUpdates(this);
         }
         currentLocation.set(location);
-        /*
-        if (LocalService.channelsDevicesAdapter != null && LocalService.currentChannel != null)
-        {
-            LocalService.channelsDevicesAdapter.notifyDataSetChanged();
-        }
 
-         */
         accuracy = Integer.toString((int) location.getAccuracy());
         if (System.currentTimeMillis() < lastgpslocationtime + pollperiod + 30000 && location.getProvider().equals(LocationManager.NETWORK_PROVIDER))
         {
@@ -1238,14 +1263,14 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         {
             distanceStringList.add(Integer.toString(index/1000)+','+Integer.toString(index%1000));
         }
-        /*
+
         Entry e = new Entry((int) workdistance,currentspeed* 3.6f);
         speeddistanceEntryList.add(e);
         Entry avge = new Entry((int) workdistance,avgspeed * 3600f);
         avgspeeddistanceEntryList.add(avge);
         Entry alte = new Entry((int) workdistance,(float) location.getAltitude());
         altitudedistanceEntryList.add(alte);
-*/
+
 
         //speeddistanceEntryList.add(e);
         refresh();
@@ -1320,7 +1345,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
 
 
 
-                    if ((int) location.getAccuracy() < hdop /*&& location.getSpeed() >= speed / 3.6*/ && (location.distanceTo(prevlocation) > distance || location.getTime() > (prevlocation.getTime() + period)))
+                    if ((int) location.getAccuracy() < hdop  && (location.distanceTo(prevlocation) > distance || location.getTime() > (prevlocation.getTime() + period)))
                     {
                         //LocalService.addlog("not modeAND and accuracy and speed");
                         //if(log)Log.d(this.getClass().getName(), "Accuracey"+location.getAccuracy()+"hdop"+hdop);
@@ -1338,6 +1363,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         }
     }
 
+    */
     void ondisconnect()
     {
     }
@@ -1347,6 +1373,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
             Log.d(this.getClass().getName(), "Изменился статус провайдера:" + provider + " статус:" + status + " Бандл:" + extras.getInt("satellites"));
     }
 
+    /*
     private void sendlocation(Location location, boolean gps)
     {
 //http://t.esya.ru/?60.452323:30.153262:5:53:25:hadfDgF:352
@@ -1420,6 +1447,9 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         }
     }
 
+*/
+
+    /*
     private String locationtoSending(Location location) {
         String sending="";
         Log.d(this.getClass().getName(), "Отправка:" + authed + " s " + sending);
@@ -1462,6 +1492,7 @@ public class OsMoEventEmitter extends ReactContextBaseJavaModule implements Resu
         return sending;
     }
 
+    */
 
     public void sendToServer(String str, boolean gui) {
         Message msg = new Message();
